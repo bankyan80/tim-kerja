@@ -61,14 +61,7 @@ interface SekolahOption {
   nama: string;
 }
 
-const sekolahList: SekolahOption[] = [
-  { id: "1", nama: "SD Negeri 1 Lemahabang" },
-  { id: "2", nama: "SD Negeri 2 Lemahabang" },
-  { id: "3", nama: "SD Negeri 3 Lemahabang" },
-  { id: "4", nama: "SD Negeri 4 Lemahabang" },
-  { id: "5", nama: "MI Al-Ihsan Lemahabang" },
-  { id: "6", nama: "SD IT Bina Cendekia" },
-];
+const sekolahList: SekolahOption[] = [];
 
 const statusPegawaiOptions: StatusPegawai[] = [
   "PNS",
@@ -129,6 +122,7 @@ export default function DataGTKPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GTK>(defaultForm);
   const [viewing, setViewing] = useState<GTK | null>(null);
+  const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   const [search, setSearch] = useState("");
   const [filterSekolah, setFilterSekolah] = useState("");
@@ -138,6 +132,7 @@ export default function DataGTKPage() {
 
   useEffect(() => {
     fetch("/api/gtk").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
   }, []);
 
   const filteredData = useMemo(() => {
@@ -193,7 +188,7 @@ export default function DataGTKPage() {
       else if (["Honorer", "GTT", "GTY"].includes(g.status_pegawai)) perSekolah[g.sekolah_id].honorer++;
     }
     return perSekolah;
-  }, [data]);
+  }, [data, sekolahList]);
 
   const columns: ColumnDef<GTK>[] = [
     {

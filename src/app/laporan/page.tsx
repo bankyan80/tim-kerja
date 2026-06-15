@@ -75,14 +75,7 @@ interface SekolahOption {
   kepala_sekolah: string;
 }
 
-const sekolahList: SekolahOption[] = [
-  { id: "1", nama: "SD Negeri 1 Lemahabang", npsn: "20217101", alamat: "Jl. Raya Lemahabang No. 1", kepala_sekolah: "Drs. H. Ahmad Syarif, M.Pd." },
-  { id: "2", nama: "SD Negeri 2 Lemahabang", npsn: "20217102", alamat: "Jl. Diponegoro No. 22", kepala_sekolah: "Hj. Siti Nuraini, S.Pd." },
-  { id: "3", nama: "SD Negeri 3 Lemahabang", npsn: "20217103", alamat: "Jl. Pahlawan No. 5", kepala_sekolah: "Drs. Cecep Supriatna, M.M." },
-  { id: "4", nama: "SD Negeri 4 Lemahabang", npsn: "20217104", alamat: "Jl. Merdeka No. 33", kepala_sekolah: "H. Maman Suryaman, S.Pd." },
-  { id: "5", nama: "MI Al-Ihsan Lemahabang", npsn: "20217105", alamat: "Jl. Sigong Indah No. 7", kepala_sekolah: "K.H. Asep Saepulloh, S.Ag." },
-  { id: "6", nama: "SD IT Bina Cendekia", npsn: "20217106", alamat: "Jl. Cipta Karya No. 3", kepala_sekolah: "Ir. H. Faisal Rahman, M.T." },
-];
+const sekolahList: SekolahOption[] = [];
 
 const kelasOptions = ["I", "II", "III", "IV", "V", "VI"];
 
@@ -165,6 +158,7 @@ export default function LaporanBulananPage() {
 
   const [data, setData] = useState<LaporanBulanan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   useEffect(() => {
     fetch("/api/laporan")
@@ -174,6 +168,7 @@ export default function LaporanBulananPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama, npsn: s.npsn || "", alamat: s.alamat || "", kepala_sekolah: s.kepala_sekolah || "" })))).catch(() => {});
   }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

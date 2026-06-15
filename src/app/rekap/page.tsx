@@ -39,14 +39,7 @@ const tahunPelajaranOptions = [
   "2026/2027",
 ];
 
-const sekolahNama = [
-  "SD Negeri 1 Lemahabang",
-  "SD Negeri 2 Lemahabang",
-  "SD Negeri 3 Lemahabang",
-  "SD Negeri 4 Lemahabang",
-  "MI Al-Ihsan Lemahabang",
-  "SD IT Bina Cendekia",
-];
+const sekolahNama: string[] = [];
 
 // --- Data per kategori ---
 
