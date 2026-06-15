@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { Plus, Eye, Pencil, Trash2, FileText } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -52,23 +52,34 @@ const tabs = [
   { label: "Buku Agenda", href: "/persuratan/buku-agenda" },
 ];
 
-const demoData: Template[] = [
-  { id: "1", nama: "Template Surat Dinas", jenis: "surat_dinas", deskripsi: "Template standar untuk surat dinas resmi", isi_template: "Nomor: {{nomor_surat}}\nLampiran: {{lampiran}}\nPerihal: {{perihal}}\n\nYth. {{tujuan}}\n\nDengan hormat,\n{{isi_surat}}\n\n{{penandatangan}}", status: "aktif" },
-  { id: "2", nama: "Template Surat Edaran", jenis: "surat_edaran", deskripsi: "Template untuk surat edaran ke sekolah", isi_template: "Nomor: {{nomor_surat}}\nPerihal: {{perihal}}\n\nKepada Yth.\n{{tujuan}}\n\nDengan ini disampaikan bahwa...\n{{isi_surat}}", status: "aktif" },
-  { id: "3", nama: "Template Surat Tugas", jenis: "surat_tugas", deskripsi: "Template untuk surat tugas staf", isi_template: "SURAT TUGAS\nNomor: {{nomor_surat}}\n\nDasar: {{dasar}}\n\nMenugaskan kepada:\nNama: {{tujuan}}\n\nUntuk: {{isi_tugas}}", status: "aktif" },
-  { id: "4", nama: "Template Undangan Rapat", jenis: "undangan", deskripsi: "Template untuk undangan rapat", isi_template: "Nomor: {{nomor_undangan}}\nPerihal: {{perihal}}\n\nAcara: {{acara}}\nHari/Tanggal: {{tanggal}}\nWaktu: {{waktu}}\nTempat: {{tempat}}", status: "tidak_aktif" },
-];
-
 export default function TemplatePage() {
-  const { data: session } = useSession();
   const pathname = usePathname();
-  const [data, setData] = useState<Template[]>(demoData);
-  const [loading] = useState(false);
+  const [data, setData] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Template>({
     id: "", nama: "", jenis: "surat_dinas", deskripsi: "", isi_template: "", status: "aktif",
   });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/persuratan/template");
+      const json = await res.json();
+      setData(Array.isArray(json) ? json : []);
+    } catch {
+      toast.error("Gagal memuat data");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const resetForm = () => {
     setForm({ id: "", nama: "", jenis: "surat_dinas", deskripsi: "", isi_template: "", status: "aktif" });
@@ -78,20 +89,44 @@ export default function TemplatePage() {
   const openEdit = (item: Template) => { setForm({ ...item }); setModalMode("edit"); };
   const openView = (item: Template) => { setForm({ ...item }); setModalMode("view"); };
 
-  const handleSave = () => {
-    if (modalMode === "add") {
-      setData((prev) => [{ ...form, id: String(Date.now()) }, ...prev]);
-    } else if (modalMode === "edit") {
-      setData((prev) => prev.map((d) => (d.id === form.id ? form : d)));
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (modalMode === "add") {
+        const res = await fetch("/api/persuratan/template", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error();
+        toast.success("Template berhasil ditambahkan");
+      } else if (modalMode === "edit") {
+        const res = await fetch("/api/persuratan/template", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) throw new Error();
+        toast.success("Template berhasil diupdate");
+      }
+      setModalMode(null);
+      resetForm();
+      await fetchData();
+    } catch {
+      toast.error("Gagal menyimpan template");
+    } finally {
+      setSaving(false);
     }
-    setModalMode(null);
-    resetForm();
   };
 
-  const handleDelete = () => {
-    if (deleteId) {
-      setData((prev) => prev.filter((d) => d.id !== deleteId));
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await fetch(`/api/persuratan/template?id=${deleteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success("Template berhasil dihapus");
       setDeleteId(null);
+      await fetchData();
+    } catch {
+      toast.error("Gagal menghapus template");
     }
   };
 
@@ -190,7 +225,7 @@ export default function TemplatePage() {
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <Button variant="outline" onClick={() => { setModalMode(null); resetForm(); }}>Batal</Button>
-          <Button onClick={handleSave}>Simpan</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
         </div>
       </Modal>
 

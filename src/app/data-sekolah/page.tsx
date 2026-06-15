@@ -3,17 +3,15 @@
 import { useState, useMemo, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import {
   School,
   Plus,
   Eye,
   Pencil,
   Trash2,
-  Search,
   Filter,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/Table";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";

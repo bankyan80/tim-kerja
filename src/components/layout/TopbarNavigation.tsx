@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Search, Bell, User, ChevronDown, LogOut, Settings, MoreHorizontal, LayoutDashboard, Mail, School, Users, GraduationCap, FileText, Building2, ClipboardList, Calendar, Archive, Monitor, BarChart3 } from "lucide-react";
+import { Search, Bell, User, ChevronDown, LogOut, Settings, MoreHorizontal, LayoutDashboard, Mail, School, Users, GraduationCap, FileText, Building2, ClipboardList, Calendar, Archive, BarChart3 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,6 @@ const menuItems = [
 
 const extraItems = [
   { label: "Arsip", href: "/arsip", icon: Archive },
-  { label: "Monitoring", href: "/monitoring", icon: Monitor },
   { label: "Rekap", href: "/rekap", icon: BarChart3 },
 ];
 

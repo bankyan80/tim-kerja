@@ -62,8 +62,6 @@ interface SekolahOption {
   nama: string;
 }
 
-const sekolahList: SekolahOption[] = [];
-
 const kelasOptions: Kelas[] = ["I", "II", "III", "IV", "V", "VI"];
 
 
@@ -118,12 +116,35 @@ export default function DataSiswaPage() {
   const [filterKelas, setFilterKelas] = useState("");
   const [filterStatusSiswa, setFilterStatusSiswa] = useState("");
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectAllPage, setSelectAllPage] = useState(false);
+  const [showNaikKelas, setShowNaikKelas] = useState(false);
+  const [naikKelasLoading, setNaikKelasLoading] = useState(false);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectPage() {
+    if (selectAllPage) {
+      setSelectedIds(new Set());
+      setSelectAllPage(false);
+    } else {
+      setSelectedIds(new Set(filteredData.map((s) => s.id)));
+      setSelectAllPage(true);
+    }
+  }
+
   useEffect(() => {
     const params = new URLSearchParams();
     if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
     const url = `/api/siswa${params.toString() ? "?" + params.toString() : ""}`;
     fetch(url).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
-    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: { id: string; nama: string }) => ({ id: s.id, nama: s.nama })))).catch(() => {});
   }, [isOperator, userSekolahId]);
 
   const filteredData = useMemo(() => {
@@ -146,6 +167,10 @@ export default function DataSiswaPage() {
     return result;
   }, [data, search, filterSekolah, filterKelas, filterStatusSiswa]);
 
+  useEffect(() => {
+    setSelectAllPage(false);
+  }, [search, filterSekolah, filterKelas, filterStatusSiswa]);
+
   const rekapData = useMemo(() => {
     const perKelas: Record<string, { L: number; P: number; total: number }> = {};
     for (const k of kelasOptions) {
@@ -161,6 +186,26 @@ export default function DataSiswaPage() {
   }, [data]);
 
   const columns: ColumnDef<Siswa>[] = [
+    {
+      id: "pilih",
+      header: () => (
+        <input
+          type="checkbox"
+          checked={selectAllPage && filteredData.length > 0}
+          onChange={toggleSelectPage}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(row.original.id)}
+          onChange={() => toggleSelect(row.original.id)}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+        />
+      ),
+      size: 40,
+    },
     {
       header: "No",
       id: "no",
@@ -266,6 +311,43 @@ export default function DataSiswaPage() {
 
   if (loading) return <Loading message="Memuat data siswa..." />;
 
+  const kelasNext: Record<string, string | null> = {
+    I: "II", II: "III", III: "IV", IV: "V", V: "VI", VI: null,
+  };
+
+  async function handleNaikKelas() {
+    setNaikKelasLoading(true);
+    const siswaNaik = data.filter((s) => selectedIds.has(s.id) && s.status_siswa === "aktif" && kelasNext[s.kelas] !== undefined);
+    let sukses = 0;
+    let lulus = 0;
+    for (const s of siswaNaik) {
+      const next = kelasNext[s.kelas];
+      try {
+        if (next) {
+          await fetch("/api/siswa", {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: s.id, kelas: next }),
+          });
+          sukses++;
+        } else {
+          await fetch("/api/siswa", {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: s.id, status_siswa: "lulus" }),
+          });
+          lulus++;
+        }
+      } catch {}
+    }
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const updated = await fetch(`/api/siswa${params.toString() ? "?" + params.toString() : ""}`).then((r) => r.json()).catch(() => []);
+    if (updated.length) setData(updated);
+    setSelectedIds(new Set());
+    setShowNaikKelas(false);
+    setNaikKelasLoading(false);
+    toast.success(`${sukses} siswa naik kelas, ${lulus} siswa lulus`);
+  }
+
   const totalAktif = data.filter((s) => s.status_siswa === "aktif").length;
 
   return (
@@ -287,6 +369,12 @@ export default function DataSiswaPage() {
               <Plus className="w-4 h-4 mr-2" />
               Tambah Siswa
             </Button>
+            {selectedIds.size > 0 && (
+              <Button variant="outline" onClick={() => setShowNaikKelas(true)}>
+                <GraduationCap className="w-4 h-4 mr-2" />
+                Naik Kelas ({selectedIds.size})
+              </Button>
+            )}
             <Button variant="outline">
               <Upload className="w-4 h-4 mr-2" />
               Import Excel
@@ -577,6 +665,43 @@ export default function DataSiswaPage() {
         )}
       </Modal>
 
+      {/* Modal Naik Kelas */}
+      <Modal
+        open={showNaikKelas}
+        onClose={() => setShowNaikKelas(false)}
+        title="Konfirmasi Kenaikan Kelas"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {(() => {
+              const siswaNaik = data.filter((s) => selectedIds.has(s.id) && s.status_siswa === "aktif" && kelasNext[s.kelas] !== undefined);
+              const naik = siswaNaik.filter((s) => kelasNext[s.kelas]);
+              const lulus = siswaNaik.filter((s) => !kelasNext[s.kelas]);
+              return `${siswaNaik.length} siswa akan diproses (${naik.length} naik kelas, ${lulus.length} lulus).`;
+            })()}
+          </p>
+          <div className="max-h-60 overflow-y-auto border rounded-lg divide-y text-sm">
+            {data.filter((s) => selectedIds.has(s.id) && s.status_siswa === "aktif").map((s) => {
+              const next = kelasNext[s.kelas];
+              return (
+                <div key={s.id} className="flex items-center justify-between px-4 py-2">
+                  <span>{s.nama_lengkap} - Kelas {s.kelas}</span>
+                  <span className="text-blue-600 font-medium">
+                    {next ? `→ Kelas ${next}` : "→ Lulus"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowNaikKelas(false)}>Batal</Button>
+            <Button onClick={handleNaikKelas} disabled={naikKelasLoading}>
+              {naikKelasLoading ? "Memproses..." : "Konfirmasi Naik Kelas"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   );

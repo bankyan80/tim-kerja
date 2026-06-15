@@ -13,7 +13,6 @@ import {
   Award,
   Clock,
   AlertTriangle,
-  Users,
   Upload,
   FileText,
 } from "lucide-react";
@@ -62,8 +61,6 @@ interface SekolahOption {
   id: string;
   nama: string;
 }
-
-const sekolahList: SekolahOption[] = [];
 
 const statusPegawaiOptions: StatusPegawai[] = [
   "PNS",
@@ -142,14 +139,15 @@ export default function DataGTKPage() {
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [gtkOptions, setGtkOptions] = useState<GTK[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [dokumenList, setDokumenList] = useState<any[]>([]);
+  type DokumenArsip = { id: string; file_name: string; file: string; file_size?: string; pemilik: string };
+  const [dokumenList, setDokumenList] = useState<DokumenArsip[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
     const url = `/api/gtk${params.toString() ? "?" + params.toString() : ""}`;
     fetch(url).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
-    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: { id: string; nama: string }) => ({ id: s.id, nama: s.nama })))).catch(() => {});
   }, [isOperator, userSekolahId]);
 
   useEffect(() => {
@@ -164,7 +162,7 @@ export default function DataGTKPage() {
   useEffect(() => {
     if (viewing) {
       fetch(`/api/arsip?jenis_dokumen=Dokumen%20GTK`).then(r => r.json()).then(d => {
-        setDokumenList(d.filter((a: any) => a.pemilik === viewing.nama));
+        setDokumenList(d.filter((a: DokumenArsip) => a.pemilik === viewing.nama));
       }).catch(() => setDokumenList([]));
     } else {
       setDokumenList([]);
@@ -378,8 +376,6 @@ export default function DataGTKPage() {
   }
 
   if (loading) return <Loading message="Memuat data GTK..." />;
-
-  const totalAktif = data.filter((g) => g.status_aktif === "aktif").length;
 
   return (
     <div className="min-h-screen bg-gray-100">

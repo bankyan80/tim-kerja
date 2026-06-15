@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import toast from "react-hot-toast";
-import { useSession } from "next-auth/react";
 import {
   Calendar,
   Plus,
@@ -79,8 +78,6 @@ const defaultForm: Kegiatan = {
 
 
 export default function KegiatanPage() {
-  const { data: session } = useSession();
-
   const [data, setData] = useState<Kegiatan[]>([]);
   const [loading, setLoading] = useState(true);
 

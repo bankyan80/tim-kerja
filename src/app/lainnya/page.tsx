@@ -4,7 +4,6 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   Archive,
-  Monitor,
   BarChart3,
   Building2,
   ClipboardList,
@@ -22,12 +21,6 @@ const modules = [
     description: "Kelola arsip digital",
     icon: Archive,
     href: "/arsip",
-  },
-  {
-    name: "Monitoring",
-    description: "Monitoring dan supervisi sekolah",
-    icon: Monitor,
-    href: "/monitoring",
   },
   {
     name: "Rekap",

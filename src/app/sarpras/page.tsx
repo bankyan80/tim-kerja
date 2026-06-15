@@ -10,7 +10,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/Table";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
@@ -48,8 +48,6 @@ interface SekolahOption {
   id: string;
   nama: string;
 }
-
-const sekolahList: SekolahOption[] = [];
 
 const jenisOptions: JenisSarpras[] = [
   "Ruang Kelas",

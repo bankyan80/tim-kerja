@@ -16,9 +16,7 @@ import {
   Plus,
   Trash2,
   Check,
-  X,
-  ChevronRight,
-  AlertCircle,
+
   Clock,
   HardDrive,
   Camera,
@@ -30,7 +28,6 @@ import { Input, Select } from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDate } from "@/lib/utils";
 import type { AppUser as UserType, UserRole, Sekolah } from "@/lib/types";
 
 const tabs = [
@@ -51,14 +48,6 @@ const roleOptions = [
 const statusOptions = [
   { value: "aktif", label: "Aktif" },
   { value: "nonaktif", label: "Nonaktif" },
-];
-
-const initialUsers: UserType[] = [
-  { id: "1", email: "ketua@lemahabang.sch.id", name: "Drs. H. Ahmad Fauzi", role: "ketua", status: "aktif", created_at: "2025-07-01" },
-  { id: "2", email: "admin@lemahabang.sch.id", name: "Siti Rahmawati, S.Pd.", role: "admin", status: "aktif", created_at: "2025-07-01" },
-  { id: "3", email: "operator@sd1.sch.id", name: "Andi Pratama", role: "staf", status: "aktif", created_at: "2025-07-15" },
-  { id: "4", email: "operator@sd2.sch.id", name: "Dewi Lestari", role: "staf", status: "aktif", created_at: "2025-07-15" },
-  { id: "5", email: "bendahara@sd1.sch.id", name: "Rudi Hartono", role: "staf", status: "nonaktif", created_at: "2025-08-01" },
 ];
 
 const modules = [
@@ -244,7 +233,6 @@ export default function PengaturanPage() {
       body: JSON.stringify({ action: "add_user", email: addUserEmail.trim(), role: addUserRole, sekolah_id: addUserSekolah || null }),
     });
     if (!res.ok) { toast.error("Gagal menambahkan user"); return; }
-    const sekolahNama = sekolahList.find((s) => s.id === addUserSekolah)?.nama;
     const newUser: UserType = {
       id: String(Date.now()),
       email: addUserEmail.trim(),

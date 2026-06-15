@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Plus, Eye, Pencil, Printer, Trash2, FileDown } from "lucide-react";
@@ -57,7 +56,6 @@ const tabs = [
 
 
 export default function SuratTugasPage() {
-  const { data: session } = useSession();
   const pathname = usePathname();
   const [data, setData] = useState<SuratTugas[]>([]);
   const [loading, setLoading] = useState(true);

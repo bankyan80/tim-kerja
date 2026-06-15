@@ -258,6 +258,19 @@ CREATE TABLE IF NOT EXISTS notifikasi (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Template Surat table
+CREATE TABLE IF NOT EXISTS template_surat (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  nama TEXT NOT NULL,
+  jenis TEXT NOT NULL,
+  deskripsi TEXT DEFAULT '',
+  isi_template TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'aktif' CHECK(status IN ('aktif','tidak_aktif')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
+);
+
 -- Backup history table
 CREATE TABLE IF NOT EXISTS backup_history (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),

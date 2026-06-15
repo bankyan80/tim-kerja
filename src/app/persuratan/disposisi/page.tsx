@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Plus, Eye, Pencil, Printer, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Eye, Pencil, Printer, Trash2, CheckCircle } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -56,7 +55,6 @@ const tabs = [
 
 
 export default function DisposisiPage() {
-  const { data: session } = useSession();
   const pathname = usePathname();
   const [data, setData] = useState<Disposisi[]>([]);
   const [loading, setLoading] = useState(true);

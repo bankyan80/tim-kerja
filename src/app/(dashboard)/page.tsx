@@ -59,7 +59,6 @@ export default function DashboardPage() {
   const progressItems = [
     { label: "Data Sekolah", selesai: stats?.sekolah?.aktif || 0, belum: (stats?.sekolah?.total || 0) - (stats?.sekolah?.aktif || 0), perbaikan: 0 },
     { label: "Laporan Bulanan", selesai: stats?.laporan?.selesai || 0, belum: (stats?.laporan?.total || 0) - (stats?.laporan?.selesai || 0), perbaikan: 0 },
-    { label: "Monitoring", selesai: 0, belum: stats?.monitoring?.total || 0, perbaikan: 0 },
   ];
 
   return (

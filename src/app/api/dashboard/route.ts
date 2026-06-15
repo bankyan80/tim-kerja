@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const whs = sid ? " WHERE s.sekolah_id = ?" : " WHERE s.deleted_at IS NULL";
     const args = sid ? [sid] : [];
 
-    const [sekolah, siswa, gtk, surat, laporan, sarpras, spmb, kegiatan, monitoring, arsip] = await Promise.all([
+    const [sekolah, siswa, gtk, surat, laporan, sarpras, spmb, kegiatan, arsip] = await Promise.all([
       sid
         ? queryAll("SELECT COUNT(*) as total, 1 as aktif, SUM(CASE WHEN status='negeri' THEN 1 ELSE 0 END) as negeri, SUM(CASE WHEN status='swasta' THEN 1 ELSE 0 END) as swasta FROM sekolah WHERE id = ? AND deleted_at IS NULL", [sid])
         : queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN status_aktif='aktif' THEN 1 ELSE 0 END) as aktif, SUM(CASE WHEN status='negeri' THEN 1 ELSE 0 END) as negeri, SUM(CASE WHEN status='swasta' THEN 1 ELSE 0 END) as swasta FROM sekolah WHERE deleted_at IS NULL"),
@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
       queryAll("SELECT COUNT(*) as total FROM sarpras" + whs, args),
       queryAll("SELECT COUNT(*) as total FROM spmb" + (sid ? " WHERE sekolah_id = ?" : ""), sid ? [sid] : []),
       queryAll("SELECT COUNT(*) as total FROM kegiatan WHERE deleted_at IS NULL"),
-      queryAll("SELECT COUNT(*) as total FROM monitoring" + whs, args),
       queryAll("SELECT COUNT(*) as total FROM arsip" + whs, args),
     ]);
 
@@ -35,7 +34,6 @@ export async function GET(req: NextRequest) {
       sarpras: sarpras[0] || { total: 0 },
       spmb: spmb[0] || { total: 0 },
       kegiatan: kegiatan[0] || { total: 0 },
-      monitoring: monitoring[0] || { total: 0 },
       arsip: arsip[0] || { total: 0 },
     });
   } catch {
@@ -48,7 +46,6 @@ export async function GET(req: NextRequest) {
       sarpras: { total: 0 },
       spmb: { total: 0 },
       kegiatan: { total: 0 },
-      monitoring: { total: 0 },
       arsip: { total: 0 },
     }, { status: 200 });
   }

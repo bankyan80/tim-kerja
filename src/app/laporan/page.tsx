@@ -75,8 +75,6 @@ interface SekolahOption {
   kepala_sekolah: string;
 }
 
-const sekolahList: SekolahOption[] = [];
-
 const kelasOptions = ["I", "II", "III", "IV", "V", "VI"];
 
 const bulanOptions = Array.from({ length: 12 }, (_, i) => ({

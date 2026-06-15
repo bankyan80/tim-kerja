@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Plus, Eye, Pencil, Printer, Trash2, ArrowRight } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -65,11 +64,10 @@ const statusVariant: Record<string, "warning" | "info" | "default" | "success" |
 
 
 export default function SuratMasukPage() {
-  const { data: session } = useSession();
   const pathname = usePathname();
   const [data, setData] = useState<SuratMasuk[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<SuratMasuk>({

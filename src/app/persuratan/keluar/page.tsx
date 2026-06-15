@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Plus, Eye, Pencil, Printer, Trash2 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -65,7 +64,6 @@ const tabs = [
 
 
 export default function SuratKeluarPage() {
-  const { data: session } = useSession();
   const pathname = usePathname();
   const [data, setData] = useState<SuratKeluar[]>([]);
   const [loading, setLoading] = useState(true);
