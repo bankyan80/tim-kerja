@@ -73,8 +73,7 @@ export default function LainnyaPage() {
   if (!session) return <Loading message="Memuat..." />;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600">
             <Grid3X3 className="w-5 h-5" />
@@ -122,6 +121,5 @@ export default function LainnyaPage() {
           </div>
         )}
       </div>
-    </div>
-  );
+    );
 }
