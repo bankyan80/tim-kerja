@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
   Building2,
@@ -70,83 +71,7 @@ const jenisOptions: JenisSarpras[] = [
   "Meubelair",
 ];
 
-const initialData: Sarpras[] = [
-  {
-    id: "1", sekolah_id: "1", jenis: "Ruang Kelas", nama: "Ruang Kelas 1A",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-  {
-    id: "2", sekolah_id: "1", jenis: "Ruang Kelas", nama: "Ruang Kelas 1B",
-    jumlah: 30, kondisi_baik: 25, kondisi_sedang: 3, kondisi_rusak: 2,
-    foto: "", usulan_perbaikan: "Perbaiki meja dan kursi yang rusak",
-  },
-  {
-    id: "3", sekolah_id: "1", jenis: "Perpustakaan", nama: "Perpustakaan SDN 1",
-    jumlah: 1, kondisi_baik: 0, kondisi_sedang: 1, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "Renovasi rak buku",
-  },
-  {
-    id: "4", sekolah_id: "2", jenis: "UKS", nama: "Ruang UKS SDN 2",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-  {
-    id: "5", sekolah_id: "2", jenis: "Toilet", nama: "Toilet Siswa Putra",
-    jumlah: 4, kondisi_baik: 2, kondisi_sedang: 1, kondisi_rusak: 1,
-    foto: "", usulan_perbaikan: "Perbaiki toilet rusak di lantai 2",
-  },
-  {
-    id: "6", sekolah_id: "2", jenis: "Toilet", nama: "Toilet Siswa Putri",
-    jumlah: 4, kondisi_baik: 3, kondisi_sedang: 1, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-  {
-    id: "7", sekolah_id: "3", jenis: "Mushola", nama: "Mushola Al-Hikmah",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-  {
-    id: "8", sekolah_id: "3", jenis: "Gudang", nama: "Gudang Perlengkapan",
-    jumlah: 1, kondisi_baik: 0, kondisi_sedang: 0, kondisi_rusak: 1,
-    foto: "", usulan_perbaikan: "Atap bocor perlu diganti",
-  },
-  {
-    id: "9", sekolah_id: "4", jenis: "Ruang Guru", nama: "Ruang Guru SDN 4",
-    jumlah: 1, kondisi_baik: 0, kondisi_sedang: 1, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "Cat ulang dinding dan ganti karpet",
-  },
-  {
-    id: "10", sekolah_id: "4", jenis: "Ruang Kepala Sekolah", nama: "Ruang Kepala SDN 4",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-  {
-    id: "11", sekolah_id: "5", jenis: "Rumah Dinas", nama: "Rumah Dinas Guru",
-    jumlah: 2, kondisi_baik: 1, kondisi_sedang: 1, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "Perbaikan instalasi listrik",
-  },
-  {
-    id: "12", sekolah_id: "5", jenis: "Meubelair", nama: "Meja & Kursi Siswa",
-    jumlah: 80, kondisi_baik: 60, kondisi_sedang: 15, kondisi_rusak: 5,
-    foto: "", usulan_perbaikan: "Pengadaan meja kursi baru 20 set",
-  },
-  {
-    id: "13", sekolah_id: "6", jenis: "Ruang Kelas", nama: "Ruang Kelas 1A IT",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-  {
-    id: "14", sekolah_id: "6", jenis: "Perpustakaan", nama: "Perpustakaan Digital",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "Tambahkan komputer baca",
-  },
-  {
-    id: "15", sekolah_id: "6", jenis: "Mushola", nama: "Mushola Bina Cendekia",
-    jumlah: 1, kondisi_baik: 1, kondisi_sedang: 0, kondisi_rusak: 0,
-    foto: "", usulan_perbaikan: "",
-  },
-];
+
 
 const defaultForm: Sarpras = {
   id: "",
@@ -164,8 +89,18 @@ const defaultForm: Sarpras = {
 export default function SarprasPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<Sarpras[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Sarpras[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/sarpras")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Sarpras>(defaultForm);
@@ -256,20 +191,41 @@ export default function SarprasPage() {
     setModalOpen(true);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirmDelete) return;
-    setData((prev) => prev.filter((s) => s.id !== confirmDelete));
+    try {
+      await fetch(`/api/sarpras?id=${confirmDelete}`, { method: "DELETE" });
+      setData((prev) => prev.filter((s) => s.id !== confirmDelete));
+      toast.success("Sarpras berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus sarpras");
+    }
     setConfirmDelete(null);
   }
 
-  function handleSave() {
-    if (editingId) {
-      setData((prev) =>
-        prev.map((s) => (s.id === editingId ? { ...form, id: editingId } : s))
-      );
-    } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+  async function handleSave() {
+    try {
+      if (editingId) {
+        const res = await fetch("/api/sarpras", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const updated = await res.json();
+        setData((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
+        toast.success("Sarpras berhasil diperbarui");
+      } else {
+        const res = await fetch("/api/sarpras", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const created = await res.json();
+        setData((prev) => [...prev, created]);
+        toast.success("Sarpras berhasil dibuat");
+      }
+    } catch {
+      toast.error("Gagal menyimpan sarpras");
     }
     setModalOpen(false);
   }

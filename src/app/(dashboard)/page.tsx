@@ -20,58 +20,47 @@ import { Badge } from "@/components/ui/Badge";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-// --- dummy data ---
-
-const summaryData = [
-  { label: "Jumlah Sekolah", value: 24, icon: School },
-  { label: "Jumlah Siswa", value: 3842, icon: Users },
-  { label: "Jumlah GTK", value: 289, icon: GraduationCap },
-  { label: "Surat Belum Diproses", value: 7, icon: Mail },
-];
-
-const progressData = [
-  { label: "Laporan Bulanan", selesai: 18, belum: 4, perbaikan: 2 },
-  { label: "Pembaruan Data Sekolah", selesai: 22, belum: 1, perbaikan: 1 },
-  { label: "Validasi Data GTK", selesai: 15, belum: 7, perbaikan: 2 },
-  { label: "Pembaruan Data Siswa", selesai: 20, belum: 3, perbaikan: 1 },
-  { label: "Pembaruan Sarpras", selesai: 10, belum: 10, perbaikan: 4 },
-  { label: "Pendataan SPMB", selesai: 24, belum: 0, perbaikan: 0 },
-  { label: "Monitoring Sekolah", selesai: 12, belum: 8, perbaikan: 4 },
-  { label: "Pengumpulan Dokumen", selesai: 14, belum: 6, perbaikan: 4 },
-];
-
-const tindakLanjutData = [
-  { item: "Verifikasi laporan bulanan SDN 1 Lemahabang", status: "Urgent" },
-  { item: "Validasi data GTK baru", status: "Baru" },
-  { item: "Periksa kelengkapan dokumen SPMB", status: "Pending" },
-  { item: "Konfirmasi data sarpras SDN 2 Lemahabang", status: "Urgent" },
-];
-
-const suratMasukData = [
-  { perihal: "Undangan Rapat Koordinasi", dari: "Dinas Pendidikan" },
-  { perihal: "Surat Edaran SPMB 2025/2026", dari: "Kemendikbud" },
-  { perihal: "Permohonan Data GTK", dari: "BPS Kabupaten" },
-];
-
-const agendaData = [
-  { acara: "Rapat Koordinasi Bidang SD", tanggal: "2026-06-18", waktu: "09:00" },
-  { acara: "Supervisi SDN 3 Lemahabang", tanggal: "2026-06-20", waktu: "08:00" },
-  { acara: "Bimtek SPMB", tanggal: "2026-06-25", waktu: "07:30" },
-];
-
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [suratMasuk, setSuratMasuk] = useState<any[]>([]);
+  const [kegiatan, setKegiatan] = useState<any[]>([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
+    async function load() {
+      try {
+        const [statsRes, suratRes, kegiatanRes] = await Promise.all([
+          fetch("/api/dashboard").then(r => r.json()),
+          fetch("/api/surat?jenis=masuk&status=draft,dikirim,diproses").then(r => r.json()),
+          fetch("/api/kegiatan").then(r => r.json()),
+        ]);
+        setStats(statsRes);
+        setSuratMasuk(Array.isArray(suratRes) ? suratRes.slice(0, 3) : []);
+        setKegiatan(Array.isArray(kegiatanRes) ? kegiatanRes.slice(0, 3) : []);
+      } catch {}
+      setLoading(false);
+    }
+    load();
   }, []);
 
   if (loading) return <Loading message="Memuat dashboard..." />;
 
   const today = formatDate(new Date());
   const tahunPelajaran = getTahunPelajaran();
+
+  const summaryItems = [
+    { label: "Jumlah Sekolah", value: stats?.sekolah?.total || 0, icon: School },
+    { label: "Jumlah Siswa", value: stats?.siswa?.total || 0, icon: Users },
+    { label: "Jumlah GTK", value: stats?.gtk?.total || 0, icon: GraduationCap },
+    { label: "Surat Belum Diproses", value: stats?.surat?.belum_diproses || 0, icon: Mail },
+  ];
+
+  const progressItems = [
+    { label: "Data Sekolah", selesai: stats?.sekolah?.aktif || 0, belum: (stats?.sekolah?.total || 0) - (stats?.sekolah?.aktif || 0), perbaikan: 0 },
+    { label: "Laporan Bulanan", selesai: stats?.laporan?.selesai || 0, belum: (stats?.laporan?.total || 0) - (stats?.laporan?.selesai || 0), perbaikan: 0 },
+    { label: "Monitoring", selesai: 0, belum: stats?.monitoring?.total || 0, perbaikan: 0 },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -105,7 +94,7 @@ export default function DashboardPage() {
 
         {/* ---- Summary Cards ---- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {summaryData.map((item) => {
+          {summaryItems.map((item) => {
             const Icon = item.icon;
             return (
               <Card key={item.label}>
@@ -141,7 +130,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {progressData.map((row) => {
+                {progressItems.map((row) => {
                   const total = row.selesai + row.belum + row.perbaikan;
                   const pct = total > 0 ? Math.round((row.selesai / total) * 100) : 0;
                   return (
@@ -189,25 +178,25 @@ export default function DashboardPage() {
                 Perlu Ditindaklanjuti
               </CardTitle>
             </CardHeader>
-            {tindakLanjutData.length === 0 ? (
+            {suratMasuk.length === 0 ? (
               <EmptyState title="Tidak ada" message="Semua data sudah ditindaklanjuti." />
             ) : (
               <ul className="space-y-3">
-                {tindakLanjutData.map((item) => (
-                  <li key={item.item} className="flex items-start gap-3 text-sm">
+                {suratMasuk.slice(0, 4).map((item: any) => (
+                  <li key={item.id} className="flex items-start gap-3 text-sm">
                     <div className="mt-0.5">
-                      <div className={`w-2 h-2 rounded-full ${item.status === "Urgent" ? "bg-red-500" : "bg-blue-500"}`} />
+                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-gray-800 truncate">{item.item}</p>
-                      <Badge variant={item.status === "Urgent" ? "danger" : "info"}>{item.status}</Badge>
+                      <p className="text-gray-800 truncate">{item.perihal}</p>
+                      <Badge variant="info">{item.asal_surat || item.klasifikasi || "Baru"}</Badge>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
             <Link
-              href="/lainnya"
+              href="/persuratan"
               className="mt-4 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               Lihat semua
@@ -223,14 +212,14 @@ export default function DashboardPage() {
                 Surat Masuk Terbaru
               </CardTitle>
             </CardHeader>
-            {suratMasukData.length === 0 ? (
+            {suratMasuk.length === 0 ? (
               <EmptyState title="Tidak ada surat" message="Belum ada surat masuk." />
             ) : (
               <ul className="space-y-3">
-                {suratMasukData.map((surat) => (
-                  <li key={surat.perihal} className="pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                {suratMasuk.map((surat: any) => (
+                  <li key={surat.id} className="pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                     <p className="text-sm font-medium text-gray-800">{surat.perihal}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Dari: {surat.dari}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Dari: {surat.asal_surat}</p>
                   </li>
                 ))}
               </ul>
@@ -252,12 +241,12 @@ export default function DashboardPage() {
                 Agenda Terdekat
               </CardTitle>
             </CardHeader>
-            {agendaData.length === 0 ? (
+            {kegiatan.length === 0 ? (
               <EmptyState title="Tidak ada agenda" message="Belum ada agenda terdekat." />
             ) : (
               <ul className="space-y-3">
-                {agendaData.map((agenda) => (
-                  <li key={agenda.acara} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                {kegiatan.map((agenda: any) => (
+                  <li key={agenda.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                     <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 shrink-0">
                       <span className="text-[10px] leading-tight font-bold uppercase">
                         {formatDate(agenda.tanggal, "MMM")}
@@ -267,7 +256,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800">{agenda.acara}</p>
+                      <p className="text-sm font-medium text-gray-800">{agenda.nama}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{agenda.waktu}</p>
                     </div>
                   </li>

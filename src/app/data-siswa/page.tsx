@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import toast from "react-hot-toast";
 import {
   Users,
   Plus,
@@ -72,162 +73,7 @@ const sekolahList: SekolahOption[] = [
 
 const kelasOptions: Kelas[] = ["I", "II", "III", "IV", "V", "VI"];
 
-const initialData: Siswa[] = [
-  {
-    id: "1", nik: "3209124509120001", nisn: "0098765431",
-    nama_lengkap: "Ahmad Fauzi", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2014-05-12",
-    agama: "Islam", alamat: "Jl. Merdeka No. 10, Lemahabang",
-    nama_ayah: "Supriyanto", nama_ibu: "Siti Aminah", nomor_kk: "3209121234560001",
-    kelas: "VI", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2020-07-15", asal_sekolah: "-",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567001",
-  },
-  {
-    id: "2", nik: "3209124509120002", nisn: "0098765432",
-    nama_lengkap: "Siti Nurhaliza", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2015-02-20",
-    agama: "Islam", alamat: "Jl. Diponegoro No. 22, Lemahabang",
-    nama_ayah: "Hasan Basri", nama_ibu: "Fatimah", nomor_kk: "3209121234560002",
-    kelas: "VI", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2020-07-15", asal_sekolah: "TK Pertiwi Lemahabang",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567002",
-  },
-  {
-    id: "3", nik: "3209124509120003", nisn: "0098765433",
-    nama_lengkap: "Budi Santoso", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2016-08-10",
-    agama: "Islam", alamat: "Jl. Pahlawan No. 5, Sigong",
-    nama_ayah: "Wahyu Hidayat", nama_ibu: "Dewi Sartika", nomor_kk: "3209121234560003",
-    kelas: "V", rombel: "A", sekolah_id: "2",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2021-07-12", asal_sekolah: "TK Harapan Bangsa",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567003",
-  },
-  {
-    id: "4", nik: "3209124509120004", nisn: "0098765434",
-    nama_lengkap: "Dian Permata", jenis_kelamin: "P",
-    tempat_lahir: "Jakarta", tanggal_lahir: "2016-11-25",
-    agama: "Islam", alamat: "Jl. Raya Sigong No. 8, Sigong",
-    nama_ayah: "Agus Salim", nama_ibu: "Nurlela", nomor_kk: "3209121234560004",
-    kelas: "V", rombel: "B", sekolah_id: "2",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2021-07-12", asal_sekolah: "TK Al-Hidayah",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567004",
-  },
-  {
-    id: "5", nik: "3209124509120005", nisn: "0098765435",
-    nama_lengkap: "Eko Prasetyo", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2017-03-18",
-    agama: "Islam", alamat: "Jl. Cipta Karya No. 3, Sindanglaut",
-    nama_ayah: "Slamet Riyadi", nama_ibu: "Sri Wahyuni", nomor_kk: "3209121234560005",
-    kelas: "IV", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2022-07-14", asal_sekolah: "TK Tunas Bangsa",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567005",
-  },
-  {
-    id: "6", nik: "3209124509120006", nisn: "0098765436",
-    nama_lengkap: "Fitri Handayani", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2017-07-22",
-    agama: "Islam", alamat: "Jl. Merdeka No. 15, Lemahabang",
-    nama_ayah: "Mulyadi", nama_ibu: "Rohimah", nomor_kk: "3209121234560006",
-    kelas: "IV", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2022-07-14", asal_sekolah: "TK Pertiwi Lemahabang",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567006",
-  },
-  {
-    id: "7", nik: "3209124509120007", nisn: "0098765437",
-    nama_lengkap: "Gilang Ramadan", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2018-01-05",
-    agama: "Islam", alamat: "Jl. Diponegoro No. 30, Lemahabang",
-    nama_ayah: "Rudi Hartono", nama_ibu: "Yuniarti", nomor_kk: "3209121234560007",
-    kelas: "III", rombel: "A", sekolah_id: "3",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2023-07-13", asal_sekolah: "TK Pembina",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567007",
-  },
-  {
-    id: "8", nik: "3209124509120008", nisn: "0098765438",
-    nama_lengkap: "Heni Rahmawati", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2018-06-14",
-    agama: "Islam", alamat: "Jl. Pahlawan No. 12, Astana",
-    nama_ayah: "Dede Kurniawan", nama_ibu: "Euis Siti", nomor_kk: "3209121234560008",
-    kelas: "III", rombel: "B", sekolah_id: "3",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2023-07-13", asal_sekolah: "TK Al-Ikhlas",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567008",
-  },
-  {
-    id: "9", nik: "3209124509120009", nisn: "0098765439",
-    nama_lengkap: "Indra Lesmana", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2019-09-30",
-    agama: "Islam", alamat: "Jl. Raya Lemahabang No. 50, Lemahabang",
-    nama_ayah: "Aep Saepullah", nama_ibu: "Iis Ismayati", nomor_kk: "3209121234560009",
-    kelas: "II", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2024-07-17", asal_sekolah: "TK Pertiwi Lemahabang",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567009",
-  },
-  {
-    id: "10", nik: "3209124509120010", nisn: "0098765440",
-    nama_lengkap: "Juwita Sari", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2019-12-15",
-    agama: "Islam", alamat: "Jl. Cipta Karya No. 1, Sindanglaut",
-    nama_ayah: "Taufik Hidayat", nama_ibu: "Rina Marlina", nomor_kk: "3209121234560010",
-    kelas: "II", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2024-07-17", asal_sekolah: "TK Tunas Bangsa",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567010",
-  },
-  {
-    id: "11", nik: "3209124509120011", nisn: "0098765441",
-    nama_lengkap: "Krisna Aditya", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2020-04-20",
-    agama: "Hindu", alamat: "Jl. Sigong Indah No. 7, Sigong",
-    nama_ayah: "I Wayan Sudarma", nama_ibu: "Ni Luh Putu", nomor_kk: "3209121234560011",
-    kelas: "I", rombel: "A", sekolah_id: "5",
-    tahun_pelajaran: "2025/2026", status_siswa: "aktif",
-    tanggal_masuk: "2025-07-16", asal_sekolah: "TK Kumara Sari",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567011",
-  },
-  {
-    id: "12", nik: "3209124509120012", nisn: "0098765442",
-    nama_lengkap: "Lina Marlina", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2013-08-08",
-    agama: "Islam", alamat: "Jl. Merdeka No. 33, Lemahabang",
-    nama_ayah: "H. Ahmad Rifai", nama_ibu: "Hj. Siti Sarah", nomor_kk: "3209121234560012",
-    kelas: "VI", rombel: "A", sekolah_id: "1",
-    tahun_pelajaran: "2025/2026", status_siswa: "lulus",
-    tanggal_masuk: "2019-07-15", asal_sekolah: "TK Pertiwi Lemahabang",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567012",
-  },
-  {
-    id: "13", nik: "3209124509120013", nisn: "0098765443",
-    nama_lengkap: "Mochammad Rizky", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "2014-11-02",
-    agama: "Islam", alamat: "Jl. Diponegoro No. 18, Lemahabang",
-    nama_ayah: "H. Rahmat Hidayat", nama_ibu: "Nurjanah", nomor_kk: "3209121234560013",
-    kelas: "V", rombel: "B", sekolah_id: "2",
-    tahun_pelajaran: "2025/2026", status_siswa: "keluar",
-    tanggal_masuk: "2021-07-12", asal_sekolah: "TK Harapan Bangsa",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567013",
-  },
-  {
-    id: "14", nik: "3209124509120014", nisn: "0098765444",
-    nama_lengkap: "Nadia Putri", jenis_kelamin: "P",
-    tempat_lahir: "Jakarta", tanggal_lahir: "2017-10-18",
-    agama: "Kristen", alamat: "Jl. Cipta Karya No. 5, Sindanglaut",
-    nama_ayah: "Andreas Wijaya", nama_ibu: "Maria Oktaviani", nomor_kk: "3209121234560014",
-    kelas: "III", rombel: "A", sekolah_id: "4",
-    tahun_pelajaran: "2025/2026", status_siswa: "mutasi",
-    tanggal_masuk: "2023-07-13", asal_sekolah: "TK Kristen Kalam Kudus",
-    kebutuhan_khusus: "Tidak", kontak_orang_tua: "081234567014",
-  },
-];
+
 
 const defaultForm: Siswa = {
   id: "",
@@ -263,18 +109,22 @@ const statusBadge: Record<StatusSiswa, { variant: "success" | "warning" | "info"
 export default function DataSiswaPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<Siswa[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Siswa[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Siswa>(defaultForm);
   const [viewing, setViewing] = useState<Siswa | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
   const [showRekap, setShowRekap] = useState(false);
   const [search, setSearch] = useState("");
   const [filterSekolah, setFilterSekolah] = useState("");
   const [filterKelas, setFilterKelas] = useState("");
   const [filterStatusSiswa, setFilterStatusSiswa] = useState("");
+
+  useEffect(() => {
+    fetch("/api/siswa").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -362,7 +212,7 @@ export default function DataSiswaPage() {
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setConfirmDelete(row.original.id)}
+            onClick={() => handleDelete(row.original.id)}
             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Hapus"
           >
@@ -385,20 +235,27 @@ export default function DataSiswaPage() {
     setModalOpen(true);
   }
 
-  function handleDelete() {
-    if (!confirmDelete) return;
-    setData((prev) => prev.filter((s) => s.id !== confirmDelete));
-    setConfirmDelete(null);
+  async function handleDelete(id: string) {
+    if (confirm("Yakin ingin menghapus data siswa ini?")) {
+      await fetch(`/api/siswa?id=${id}`, { method: "DELETE" });
+      setData((prev) => prev.filter((s) => s.id !== id));
+      toast.success("Siswa berhasil dihapus");
+    }
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (editingId) {
-      setData((prev) =>
-        prev.map((s) => (s.id === editingId ? { ...form, id: editingId } : s))
-      );
+      const res = await fetch("/api/siswa", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) { setData((prev) => prev.map((s) => (s.id === editingId ? { ...form, id: editingId } : s))); toast.success("Siswa berhasil diupdate"); }
     } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+      const res = await fetch("/api/siswa", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [...prev, { ...form, id: newId }]); toast.success("Siswa berhasil ditambahkan"); }
     }
     setModalOpen(false);
   }
@@ -714,21 +571,7 @@ export default function DataSiswaPage() {
         )}
       </Modal>
 
-      {/* Modal Confirm Delete */}
-      <Modal
-        open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        title="Konfirmasi Hapus"
-        size="sm"
-      >
-        <p className="text-sm text-gray-600">
-          Apakah Anda yakin ingin menghapus data siswa ini? Tindakan ini tidak dapat dibatalkan.
-        </p>
-        <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" onClick={() => setConfirmDelete(null)}>Batal</Button>
-          <Button variant="danger" onClick={handleDelete}>Hapus</Button>
-        </div>
-      </Modal>
+
     </div>
   );
 }

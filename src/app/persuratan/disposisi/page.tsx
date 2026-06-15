@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 type Disposisi = {
   id: string;
@@ -52,24 +53,23 @@ const tabs = [
   { label: "Buku Agenda", href: "/persuratan/buku-agenda" },
 ];
 
-const demoData: Disposisi[] = [
-  { id: "1", nomor_surat: "421/101/Disdik", asal: "Dinas Pendidikan", perihal: "Undangan Rapat Koordinasi", penerima: "Kepala Bidang SD", instruksi: "Hadiri dan laporkan hasil", batas_tindak_lanjut: "2026-06-20", status: "diproses", catatan: "" },
-  { id: "2", nomor_surat: "422/55/BPS", asal: "BPS Kabupaten", perihal: "Permohonan Data GTK", penerima: "Staf Data GTK", instruksi: "Siapkan data yang diminta", batas_tindak_lanjut: "2026-06-15", status: "selesai", catatan: "Data sudah dikirim" },
-  { id: "3", nomor_surat: "423/20/Kemendikbud", asal: "Kemendikbud", perihal: "Surat Edaran SPMB", penerima: "Kepala Bidang SD", instruksi: "Sosialisasikan ke sekolah", batas_tindak_lanjut: "2026-06-25", status: "draft", catatan: "" },
-  { id: "4", nomor_surat: "424/33/BPMP", asal: "BPMP Provinsi", perihal: "Monitoring dan Evaluasi", penerima: "Staf Monitoring", instruksi: "Persiapkan dokumen evaluasi", batas_tindak_lanjut: "2026-06-10", status: "ditunda", catatan: "Menunggu jadwal baru" },
-];
+
 
 export default function DisposisiPage() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [data, setData] = useState<Disposisi[]>(demoData);
-  const [loading] = useState(false);
+  const [data, setData] = useState<Disposisi[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Disposisi>({
     id: "", nomor_surat: "", asal: "", perihal: "", penerima: "", instruksi: "",
     batas_tindak_lanjut: "", status: "draft", catatan: "",
   });
+
+  useEffect(() => {
+    fetch("/api/surat?jenis=masuk").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const resetForm = () => {
     setForm({ id: "", nomor_surat: "", asal: "", perihal: "", penerima: "", instruksi: "", batas_tindak_lanjut: "", status: "draft", catatan: "" });
@@ -79,22 +79,26 @@ export default function DisposisiPage() {
   const openEdit = (item: Disposisi) => { setForm({ ...item }); setModalMode("edit"); };
   const openView = (item: Disposisi) => { setForm({ ...item }); setModalMode("view"); };
 
-  const handleSave = () => {
-    if (modalMode === "add") {
-      setData((prev) => [{ ...form, id: String(Date.now()) }, ...prev]);
-    } else if (modalMode === "edit") {
-      setData((prev) => prev.map((d) => (d.id === form.id ? form : d)));
+  async function handleSave() {
+    const payload = { ...form, jenis: "masuk" };
+    if (modalMode === "edit") {
+      const res = await fetch("/api/surat", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, id: form.id }) });
+      if (res.ok) { setData((prev) => prev.map((d) => (d.id === form.id ? { ...payload, id: form.id } : d))); toast.success("Data berhasil diupdate"); }
+    } else {
+      const res = await fetch("/api/surat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [{ ...payload, id: newId }, ...prev]); toast.success("Data berhasil ditambahkan"); }
     }
     setModalMode(null);
-    resetForm();
-  };
+  }
 
-  const handleDelete = () => {
+  async function handleDelete() {
     if (deleteId) {
+      await fetch(`/api/surat?id=${deleteId}`, { method: "DELETE" });
       setData((prev) => prev.filter((d) => d.id !== deleteId));
       setDeleteId(null);
+      toast.success("Data berhasil dihapus");
     }
-  };
+  }
 
   const columns: ColumnDef<Disposisi>[] = [
     { header: "No Surat", accessorKey: "nomor_surat" },

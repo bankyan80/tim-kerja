@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
   ClipboardList,
@@ -50,38 +51,7 @@ const tahunPelajaranOptions = [
   "2026/2027",
 ];
 
-const initialData: SPMB[] = [
-  {
-    id: "1", sekolah_id: "1", tahun_pelajaran: "2025/2026",
-    daya_tampung: 112, pendaftar: 98, diterima: 98,
-    jalur_domisili: 50, jalur_afirmasi: 30, jalur_mutasi: 18,
-  },
-  {
-    id: "2", sekolah_id: "2", tahun_pelajaran: "2025/2026",
-    daya_tampung: 56, pendaftar: 62, diterima: 56,
-    jalur_domisili: 28, jalur_afirmasi: 18, jalur_mutasi: 10,
-  },
-  {
-    id: "3", sekolah_id: "3", tahun_pelajaran: "2025/2026",
-    daya_tampung: 84, pendaftar: 71, diterima: 71,
-    jalur_domisili: 40, jalur_afirmasi: 20, jalur_mutasi: 11,
-  },
-  {
-    id: "4", sekolah_id: "4", tahun_pelajaran: "2025/2026",
-    daya_tampung: 42, pendaftar: 35, diterima: 35,
-    jalur_domisili: 18, jalur_afirmasi: 12, jalur_mutasi: 5,
-  },
-  {
-    id: "5", sekolah_id: "5", tahun_pelajaran: "2025/2026",
-    daya_tampung: 96, pendaftar: 88, diterima: 88,
-    jalur_domisili: 45, jalur_afirmasi: 28, jalur_mutasi: 15,
-  },
-  {
-    id: "6", sekolah_id: "6", tahun_pelajaran: "2025/2026",
-    daya_tampung: 28, pendaftar: 30, diterima: 28,
-    jalur_domisili: 14, jalur_afirmasi: 10, jalur_mutasi: 4,
-  },
-];
+
 
 const defaultForm: SPMB = {
   id: "",
@@ -98,14 +68,25 @@ const defaultForm: SPMB = {
 export default function SPMBPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<SPMB[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<SPMB[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/spmb")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<SPMB>(defaultForm);
   const [viewing, setViewing] = useState<SPMB | null>(null);
   const [filterSekolah, setFilterSekolah] = useState("");
   const [filterTahun, setFilterTahun] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -158,6 +139,13 @@ export default function SPMBPage() {
           >
             <Pencil className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setConfirmDelete(row.original.id)}
+            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Hapus"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       ),
     },
@@ -175,14 +163,41 @@ export default function SPMBPage() {
     setModalOpen(true);
   }
 
-  function handleSave() {
-    if (editingId) {
-      setData((prev) =>
-        prev.map((s) => (s.id === editingId ? { ...form, id: editingId } : s))
-      );
-    } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+  async function handleDelete() {
+    if (!confirmDelete) return;
+    try {
+      await fetch(`/api/spmb?id=${confirmDelete}`, { method: "DELETE" });
+      setData((prev) => prev.filter((s) => s.id !== confirmDelete));
+      toast.success("Data SPMB berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus data SPMB");
+    }
+    setConfirmDelete(null);
+  }
+
+  async function handleSave() {
+    try {
+      if (editingId) {
+        const res = await fetch("/api/spmb", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const updated = await res.json();
+        setData((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
+        toast.success("Data SPMB berhasil diperbarui");
+      } else {
+        const res = await fetch("/api/spmb", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const created = await res.json();
+        setData((prev) => [...prev, created]);
+        toast.success("Data SPMB berhasil dibuat");
+      }
+    } catch {
+      toast.error("Gagal menyimpan data SPMB");
     }
     setModalOpen(false);
   }
@@ -364,6 +379,22 @@ export default function SPMBPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal Confirm Delete */}
+      <Modal
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Konfirmasi Hapus"
+        size="sm"
+      >
+        <p className="text-sm text-gray-600">
+          Apakah Anda yakin ingin menghapus data SPMB ini? Tindakan ini tidak dapat dibatalkan.
+        </p>
+        <div className="flex justify-end gap-3 mt-6">
+          <Button variant="outline" onClick={() => setConfirmDelete(null)}>Batal</Button>
+          <Button variant="danger" onClick={handleDelete}>Hapus</Button>
+        </div>
       </Modal>
     </div>
   );

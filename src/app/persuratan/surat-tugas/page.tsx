@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 type SuratTugas = {
   id: string;
@@ -53,24 +54,23 @@ const tabs = [
   { label: "Buku Agenda", href: "/persuratan/buku-agenda" },
 ];
 
-const demoData: SuratTugas[] = [
-  { id: "1", nomor_surat: "800/101/Bid.SD", tanggal: "2026-06-01", tujuan: "Ani Rahmawati, S.Pd.", perihal: "Supervisi SDN 1 Lemahabang", dasar: "Program Kerja Bidang SD", penandatangan: "Kepala Dinas", isi_tugas: "Melaksanakan supervisi akademik di SDN 1 Lemahabang", lampiran: "", status: "diterbitkan" },
-  { id: "2", nomor_surat: "800/102/Bid.SD", tanggal: "2026-06-03", tujuan: "Budi Santoso, S.Pd.", perihal: "Bimtek Kurikulum Merdeka", dasar: "Undangan Bimtek dari Disdik", penandatangan: "Kepala Bidang SD", isi_tugas: "Mengikuti Bimtek Kurikulum Merdeka", lampiran: "undangan_bimtek.pdf", status: "selesai" },
-  { id: "3", nomor_surat: "800/103/Bid.SD", tanggal: "2026-06-05", tujuan: "Citra Dewi, S.Pd.", perihal: "Verifikasi Data GTK", dasar: "Instruksi Kepala Dinas", penandatangan: "Kepala Dinas", isi_tugas: "Verifikasi data GTK di 10 sekolah", lampiran: "", status: "draft" },
-  { id: "4", nomor_surat: "800/104/Bid.SD", tanggal: "2026-06-08", tujuan: "Dedi Kurniawan", perihal: "Monitoring SPMB", dasar: "Keputusan Kepala Dinas", penandatangan: "Kepala Dinas", isi_tugas: "Monitoring pelaksanaan SPMB di kecamatan", lampiran: "", status: "diarsipkan" },
-];
+
 
 export default function SuratTugasPage() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [data, setData] = useState<SuratTugas[]>(demoData);
-  const [loading] = useState(false);
+  const [data, setData] = useState<SuratTugas[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<SuratTugas>({
     id: "", nomor_surat: "", tanggal: "", tujuan: "", perihal: "", dasar: "",
     penandatangan: "", isi_tugas: "", lampiran: "", status: "draft",
   });
+
+  useEffect(() => {
+    fetch("/api/surat?jenis=tugas").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const resetForm = () => {
     setForm({ id: "", nomor_surat: "", tanggal: "", tujuan: "", perihal: "", dasar: "", penandatangan: "", isi_tugas: "", lampiran: "", status: "draft" });
@@ -80,22 +80,26 @@ export default function SuratTugasPage() {
   const openEdit = (item: SuratTugas) => { setForm({ ...item }); setModalMode("edit"); };
   const openView = (item: SuratTugas) => { setForm({ ...item }); setModalMode("view"); };
 
-  const handleSave = () => {
-    if (modalMode === "add") {
-      setData((prev) => [{ ...form, id: String(Date.now()) }, ...prev]);
-    } else if (modalMode === "edit") {
-      setData((prev) => prev.map((d) => (d.id === form.id ? form : d)));
+  async function handleSave() {
+    const payload = { ...form, jenis: "tugas" };
+    if (modalMode === "edit") {
+      const res = await fetch("/api/surat", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, id: form.id }) });
+      if (res.ok) { setData((prev) => prev.map((d) => (d.id === form.id ? { ...payload, id: form.id } : d))); toast.success("Data berhasil diupdate"); }
+    } else {
+      const res = await fetch("/api/surat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [{ ...payload, id: newId }, ...prev]); toast.success("Data berhasil ditambahkan"); }
     }
     setModalMode(null);
-    resetForm();
-  };
+  }
 
-  const handleDelete = () => {
+  async function handleDelete() {
     if (deleteId) {
+      await fetch(`/api/surat?id=${deleteId}`, { method: "DELETE" });
       setData((prev) => prev.filter((d) => d.id !== deleteId));
       setDeleteId(null);
+      toast.success("Data berhasil dihapus");
     }
-  };
+  }
 
   const columns: ColumnDef<SuratTugas>[] = [
     { header: "No Surat", accessorKey: "nomor_surat" },

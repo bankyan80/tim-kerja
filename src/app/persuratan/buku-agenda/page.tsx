@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 type BukuAgenda = {
   id: string;
@@ -42,20 +43,13 @@ const tabs = [
   { label: "Buku Agenda", href: "/persuratan/buku-agenda" },
 ];
 
-const demoData: BukuAgenda[] = [
-  { id: "1", tanggal: "2026-06-01", nomor_agenda: "001", jenis: "masuk", nomor_surat: "421/101/Disdik", pengirim_penerima: "Dinas Pendidikan", perihal: "Undangan Rapat Koordinasi", keterangan: "Diteruskan ke Kabid SD" },
-  { id: "2", tanggal: "2026-06-02", nomor_agenda: "002", jenis: "keluar", nomor_surat: "421/101/Bid.SD", pengirim_penerima: "SDN 1 Lemahabang", perihal: "Pemberitahuan Bimtek", keterangan: "" },
-  { id: "3", tanggal: "2026-06-03", nomor_agenda: "003", jenis: "masuk", nomor_surat: "422/55/BPS", pengirim_penerima: "BPS Kabupaten", perihal: "Permohonan Data GTK", keterangan: "Disposisi ke staf GTK" },
-  { id: "4", tanggal: "2026-06-04", nomor_agenda: "004", jenis: "keluar", nomor_surat: "422/55/Bid.SD", pengirim_penerima: "BPS Kabupaten", perihal: "Pengiriman Data GTK", keterangan: "Dikirim via email" },
-  { id: "5", tanggal: "2026-06-05", nomor_agenda: "005", jenis: "masuk", nomor_surat: "423/20/Kemendikbud", pengirim_penerima: "Kemendikbud", perihal: "Surat Edaran SPMB", keterangan: "" },
-  { id: "6", tanggal: "2026-06-06", nomor_agenda: "006", jenis: "keluar", nomor_surat: "423/20/Bid.SD", pengirim_penerima: "Kemendikbud", perihal: "Laporan SPMB", keterangan: "" },
-];
+
 
 export default function BukuAgendaPage() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [data, setData] = useState<BukuAgenda[]>(demoData);
-  const [loading] = useState(false);
+  const [data, setData] = useState<BukuAgenda[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("semua");
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -63,6 +57,10 @@ export default function BukuAgendaPage() {
     id: "", tanggal: "", nomor_agenda: "", jenis: "masuk", nomor_surat: "",
     pengirim_penerima: "", perihal: "", keterangan: "",
   });
+
+  useEffect(() => {
+    fetch("/api/surat").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const resetForm = () => {
     setForm({ id: "", tanggal: "", nomor_agenda: "", jenis: "masuk", nomor_surat: "", pengirim_penerima: "", perihal: "", keterangan: "" });
@@ -72,22 +70,26 @@ export default function BukuAgendaPage() {
   const openEdit = (item: BukuAgenda) => { setForm({ ...item }); setModalMode("edit"); };
   const openView = (item: BukuAgenda) => { setForm({ ...item }); setModalMode("view"); };
 
-  const handleSave = () => {
-    if (modalMode === "add") {
-      setData((prev) => [{ ...form, id: String(Date.now()) }, ...prev]);
-    } else if (modalMode === "edit") {
-      setData((prev) => prev.map((d) => (d.id === form.id ? form : d)));
+  async function handleSave() {
+    const payload = { ...form };
+    if (modalMode === "edit") {
+      const res = await fetch("/api/surat", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, id: form.id }) });
+      if (res.ok) { setData((prev) => prev.map((d) => (d.id === form.id ? { ...payload, id: form.id } : d))); toast.success("Data berhasil diupdate"); }
+    } else {
+      const res = await fetch("/api/surat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [{ ...payload, id: newId }, ...prev]); toast.success("Data berhasil ditambahkan"); }
     }
     setModalMode(null);
-    resetForm();
-  };
+  }
 
-  const handleDelete = () => {
+  async function handleDelete() {
     if (deleteId) {
+      await fetch(`/api/surat?id=${deleteId}`, { method: "DELETE" });
       setData((prev) => prev.filter((d) => d.id !== deleteId));
       setDeleteId(null);
+      toast.success("Data berhasil dihapus");
     }
-  };
+  }
 
   const filteredData = filter === "semua" ? data : data.filter((d) => d.jenis === filter);
 

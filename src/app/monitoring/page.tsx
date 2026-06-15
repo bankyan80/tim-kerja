@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
   Monitor,
@@ -104,120 +105,7 @@ const timelineData: Record<string, TimelineEntry[]> = {
   ],
 };
 
-const initialData: Monitoring[] = [
-  {
-    id: "1",
-    sekolah_id: "1",
-    tanggal: "2025-07-10",
-    petugas: "Drs. Ahmad Suherman",
-    jenis_monitoring: "Akademik",
-    instrumen: "instrumen_akademik_1.pdf",
-    temuan: "Kurangnya media pembelajaran interaktif di kelas 1-3. Guru belum menggunakan metode pembelajaran berbasis teknologi.",
-    rekomendasi: "Sekolah perlu mengadakan pelatihan IT untuk guru dan mengalokasikan dana BOS untuk pengadaan media pembelajaran interaktif.",
-    tindak_lanjut: "Sekolah telah mengajukan proposal pengadaan LCD proyektor dan pelatihan IT guru untuk semester depan.",
-    batas_waktu: "2025-09-10",
-    bukti_foto: "foto_monitoring_1.jpg",
-    status: "selesai",
-  },
-  {
-    id: "2",
-    sekolah_id: "2",
-    tanggal: "2025-08-05",
-    petugas: "Hj. Siti Maryam, S.Pd.",
-    jenis_monitoring: "Administrasi",
-    instrumen: "ceklist_administrasi_2.pdf",
-    temuan: "Dokumen administrasi kelas belum lengkap. Beberapa RPP tidak sesuai dengan format terbaru kurikulum merdeka.",
-    rekomendasi: "Melengkapi dokumen administrasi kelas dan merevisi RPP sesuai format kurikulum merdeka.",
-    tindak_lanjut: "Sedang dalam proses revisi RPP oleh tim guru kelas.",
-    batas_waktu: "2025-10-05",
-    bukti_foto: "",
-    status: "ditindaklanjuti",
-  },
-  {
-    id: "3",
-    sekolah_id: "3",
-    tanggal: "2025-08-20",
-    petugas: "Drs. H. Edi Sumantri",
-    jenis_monitoring: "Sarpras",
-    instrumen: "ceklist_sarpras_3.pdf",
-    temuan: "Atap ruang kelas IV bocor saat hujan. WC siswa rusak dan tidak berfungsi.",
-    rekomendasi: "Perbaikan atap dan renovasi WC siswa harus segera dilakukan sebelum tahun ajaran baru.",
-    tindak_lanjut: "",
-    batas_waktu: "2025-11-20",
-    bukti_foto: "foto_atap_bocor.jpg",
-    status: "tertunda",
-  },
-  {
-    id: "4",
-    sekolah_id: "4",
-    tanggal: "2025-06-15",
-    petugas: "Ibu Yuniarti, S.Pd.",
-    jenis_monitoring: "Keuangan",
-    instrumen: "ceklist_keuangan_4.pdf",
-    temuan: "Laporan penggunaan dana BOS triwulan II belum disusun. Terdapat selisih pencatatan kas kecil sebesar Rp 250.000.",
-    rekomendasi: "Segera menyusun laporan BOS triwulan II dan melakukan audit internal kas kecil.",
-    tindak_lanjut: "Laporan BOS sudah selesai disusun dan diverifikasi oleh tim pengawas. Selisih kas kecil sudah ditemukan penyebabnya.",
-    batas_waktu: "2025-08-15",
-    bukti_foto: "",
-    status: "selesai",
-  },
-  {
-    id: "5",
-    sekolah_id: "5",
-    tanggal: "2025-09-01",
-    petugas: "K. Ahmad Fauzi, S.Ag.",
-    jenis_monitoring: "Lainnya",
-    instrumen: "ceklist_ekstra_5.pdf",
-    temuan: "Kegiatan ekstrakurikuler belum berjalan optimal. Jadwal ekstrakurikuler bentrok dengan jadwal pondok pesantren.",
-    rekomendasi: "Menyusun ulang jadwal ekstrakurikuler dengan mempertimbangkan jadwal pondok pesantren.",
-    tindak_lanjut: "Sedang dilakukan koordinasi dengan pihak pondok pesantren untuk penyesuaian jadwal.",
-    batas_waktu: "2025-11-01",
-    bukti_foto: "",
-    status: "ditindaklanjuti",
-  },
-  {
-    id: "6",
-    sekolah_id: "6",
-    tanggal: "2025-05-10",
-    petugas: "Dra. Hj. Nurhayati",
-    jenis_monitoring: "Akademik",
-    instrumen: "instrumen_akademik_6.pdf",
-    temuan: "Nilai rata-rata UTS siswa kelas 4-6 di bawah KKM pada mata pelajaran Matematika dan IPA.",
-    rekomendasi: "Program remedial dan pengayaan harus dijalankan secara intensif. Guru mapel perlu mengikuti bimbingan teknis.",
-    tindak_lanjut: "Program remedial sudah berjalan setiap hari Sabtu. Guru sudah mengikuti bimtek Matematika dan IPA.",
-    batas_waktu: "2025-08-10",
-    bukti_foto: "",
-    status: "selesai",
-  },
-  {
-    id: "7",
-    sekolah_id: "1",
-    tanggal: "2025-09-15",
-    petugas: "Drs. Ahmad Suherman",
-    jenis_monitoring: "Administrasi",
-    instrumen: "ceklist_dapodik_7.pdf",
-    temuan: "Data Dapodik belum terupdate untuk 5 siswa pindah dan 3 guru baru. Terdapat ketidaksesuaian data rombel.",
-    rekomendasi: "Operator Dapodik harus segera melakukan update data dan verifikasi ulang data rombel.",
-    tindak_lanjut: "",
-    batas_waktu: "2025-11-15",
-    bukti_foto: "",
-    status: "tertunda",
-  },
-  {
-    id: "8",
-    sekolah_id: "2",
-    tanggal: "2025-04-20",
-    petugas: "Hj. Siti Maryam, S.Pd.",
-    jenis_monitoring: "Sarpras",
-    instrumen: "ceklist_sarpras_8.pdf",
-    temuan: "Perpustakaan sekolah kekurangan buku bacaan untuk siswa kelas 1-3. Rak buku beberapa dalam kondisi rusak.",
-    rekomendasi: "Pengadaan buku bacaan bergambar untuk kelas rendah dan perbaikan rak buku.",
-    tindak_lanjut: "Buku bacaan baru sudah diadakan sebanyak 100 eksemplar. Rak buku sudah diperbaiki.",
-    batas_waktu: "2025-07-20",
-    bukti_foto: "foto_perpustakaan_baru.jpg",
-    status: "selesai",
-  },
-];
+
 
 const defaultForm: Monitoring = {
   id: "",
@@ -237,8 +125,18 @@ const defaultForm: Monitoring = {
 export default function MonitoringPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<Monitoring[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Monitoring[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/monitoring")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Monitoring>(defaultForm);
@@ -335,20 +233,41 @@ export default function MonitoringPage() {
     setModalOpen(true);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirmDelete) return;
-    setData((prev) => prev.filter((m) => m.id !== confirmDelete));
+    try {
+      await fetch(`/api/monitoring?id=${confirmDelete}`, { method: "DELETE" });
+      setData((prev) => prev.filter((m) => m.id !== confirmDelete));
+      toast.success("Monitoring berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus monitoring");
+    }
     setConfirmDelete(null);
   }
 
-  function handleSave() {
-    if (editingId) {
-      setData((prev) =>
-        prev.map((m) => (m.id === editingId ? { ...form, id: editingId } : m))
-      );
-    } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+  async function handleSave() {
+    try {
+      if (editingId) {
+        const res = await fetch("/api/monitoring", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const updated = await res.json();
+        setData((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
+        toast.success("Monitoring berhasil diperbarui");
+      } else {
+        const res = await fetch("/api/monitoring", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const created = await res.json();
+        setData((prev) => [...prev, created]);
+        toast.success("Monitoring berhasil dibuat");
+      }
+    } catch {
+      toast.error("Gagal menyimpan monitoring");
     }
     setModalOpen(false);
   }

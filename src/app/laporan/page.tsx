@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
   FileText,
@@ -157,190 +158,23 @@ const defaultForm: LaporanBulanan = {
   lampiran: [],
 };
 
-const initialData: LaporanBulanan[] = [
-  {
-    id: "1", sekolah_id: "1", bulan: 1, tahun_pelajaran: "2025/2026", status: "terverifikasi",
-    tanggal_dibuat: "2025-01-10", catatan: "Laporan bulan Januari lengkap",
-    jumlah_siswa: { I: { L: 12, P: 10 }, II: { L: 11, P: 13 }, III: { L: 14, P: 9 }, IV: { L: 10, P: 12 }, V: { L: 13, P: 11 }, VI: { L: 15, P: 8 } },
-    siswa_masuk: 0, siswa_keluar: 1, siswa_mutasi: 0,
-    jumlah_guru: 12, jumlah_tendik: 3,
-    kehadiran_hadir: 148, kehadiran_sakit: 3, kehadiran_izin: 2, kehadiran_alpha: 0,
-    kondisi_ruangan: "Baik, semua ruangan layak pakai", sarana_prasarana: "Meja dan kursi dalam kondisi baik",
-    meubelair: "Lemari dan rak buku tersedia cukup", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "2", sekolah_id: "1", bulan: 2, tahun_pelajaran: "2025/2026", status: "terverifikasi",
-    tanggal_dibuat: "2025-02-10", catatan: "Laporan bulan Februari lengkap",
-    jumlah_siswa: { I: { L: 12, P: 10 }, II: { L: 11, P: 13 }, III: { L: 14, P: 9 }, IV: { L: 10, P: 12 }, V: { L: 13, P: 11 }, VI: { L: 15, P: 8 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 1,
-    jumlah_guru: 12, jumlah_tendik: 3,
-    kehadiran_hadir: 146, kehadiran_sakit: 4, kehadiran_izin: 1, kehadiran_alpha: 1,
-    kondisi_ruangan: "Baik", sarana_prasarana: "Baik",
-    meubelair: "Cukup", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "3", sekolah_id: "1", bulan: 3, tahun_pelajaran: "2025/2026", status: "dikirim",
-    tanggal_dibuat: "2025-03-08", catatan: "",
-    jumlah_siswa: { I: { L: 12, P: 10 }, II: { L: 11, P: 13 }, III: { L: 14, P: 9 }, IV: { L: 10, P: 12 }, V: { L: 13, P: 11 }, VI: { L: 15, P: 8 } },
-    siswa_masuk: 1, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 12, jumlah_tendik: 3,
-    kehadiran_hadir: 150, kehadiran_sakit: 1, kehadiran_izin: 1, kehadiran_alpha: 0,
-    kondisi_ruangan: "Baik", sarana_prasarana: "Baik",
-    meubelair: "Cukup", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "4", sekolah_id: "2", bulan: 1, tahun_pelajaran: "2025/2026", status: "terverifikasi",
-    tanggal_dibuat: "2025-01-11", catatan: "",
-    jumlah_siswa: { I: { L: 9, P: 8 }, II: { L: 10, P: 7 }, III: { L: 8, P: 9 }, IV: { L: 11, P: 6 }, V: { L: 7, P: 10 }, VI: { L: 9, P: 8 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 10, jumlah_tendik: 2,
-    kehadiran_hadir: 102, kehadiran_sakit: 2, kehadiran_izin: 0, kehadiran_alpha: 0,
-    kondisi_ruangan: "Baik", sarana_prasarana: "Cukup",
-    meubelair: "Cukup", sumber_air_bersih: "Sumur",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "5", sekolah_id: "2", bulan: 2, tahun_pelajaran: "2025/2026", status: "menunggu_verifikasi",
-    tanggal_dibuat: "2025-02-09", catatan: "Menunggu konfirmasi Dinas",
-    jumlah_siswa: { I: { L: 9, P: 8 }, II: { L: 10, P: 7 }, III: { L: 8, P: 9 }, IV: { L: 11, P: 6 }, V: { L: 7, P: 10 }, VI: { L: 9, P: 8 } },
-    siswa_masuk: 0, siswa_keluar: 1, siswa_mutasi: 0,
-    jumlah_guru: 10, jumlah_tendik: 2,
-    kehadiran_hadir: 100, kehadiran_sakit: 1, kehadiran_izin: 2, kehadiran_alpha: 0,
-    kondisi_ruangan: "Baik", sarana_prasarana: "Cukup",
-    meubelair: "Cukup", sumber_air_bersih: "Sumur",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "6", sekolah_id: "2", bulan: 3, tahun_pelajaran: "2025/2026", status: "draft",
-    tanggal_dibuat: "2025-03-05", catatan: "Masih melengkapi data kehadiran",
-    jumlah_siswa: { I: { L: 9, P: 8 }, II: { L: 10, P: 7 }, III: { L: 8, P: 9 }, IV: { L: 11, P: 6 }, V: { L: 7, P: 10 }, VI: { L: 9, P: 8 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 10, jumlah_tendik: 2,
-    kehadiran_hadir: 0, kehadiran_sakit: 0, kehadiran_izin: 0, kehadiran_alpha: 0,
-    kondisi_ruangan: "", sarana_prasarana: "",
-    meubelair: "", sumber_air_bersih: "Sumur",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "7", sekolah_id: "3", bulan: 1, tahun_pelajaran: "2025/2026", status: "perlu_perbaikan",
-    tanggal_dibuat: "2025-01-12", catatan: "Data jumlah siswa tidak sesuai dengan absensi",
-    jumlah_siswa: { I: { L: 15, P: 12 }, II: { L: 14, P: 11 }, III: { L: 13, P: 14 }, IV: { L: 12, P: 13 }, V: { L: 11, P: 12 }, VI: { L: 10, P: 11 } },
-    siswa_masuk: 2, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 14, jumlah_tendik: 4,
-    kehadiran_hadir: 150, kehadiran_sakit: 5, kehadiran_izin: 3, kehadiran_alpha: 1,
-    kondisi_ruangan: "Baik", sarana_prasarana: "Perlu perbaikan meja siswa",
-    meubelair: "Kursi beberapa rusak", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "Mohon verifikasi ulang data", lampiran: [],
-  },
-  {
-    id: "8", sekolah_id: "3", bulan: 2, tahun_pelajaran: "2025/2026", status: "draft",
-    tanggal_dibuat: "2025-02-07", catatan: "",
-    jumlah_siswa: { I: { L: 15, P: 12 }, II: { L: 14, P: 11 }, III: { L: 13, P: 14 }, IV: { L: 12, P: 13 }, V: { L: 11, P: 12 }, VI: { L: 10, P: 11 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 1,
-    jumlah_guru: 14, jumlah_tendik: 4,
-    kehadiran_hadir: 148, kehadiran_sakit: 2, kehadiran_izin: 1, kehadiran_alpha: 0,
-    kondisi_ruangan: "Baik", sarana_prasarana: "Baik",
-    meubelair: "Cukup", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "9", sekolah_id: "4", bulan: 1, tahun_pelajaran: "2025/2026", status: "terlambat",
-    tanggal_dibuat: "2025-02-15", catatan: "Laporan terlambat dikirim",
-    jumlah_siswa: { I: { L: 8, P: 7 }, II: { L: 9, P: 6 }, III: { L: 7, P: 8 }, IV: { L: 10, P: 5 }, V: { L: 6, P: 9 }, VI: { L: 8, P: 7 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 8, jumlah_tendik: 2,
-    kehadiran_hadir: 90, kehadiran_sakit: 1, kehadiran_izin: 0, kehadiran_alpha: 0,
-    kondisi_ruangan: "Cukup", sarana_prasarana: "Cukup",
-    meubelair: "Kurang", sumber_air_bersih: "Mata Air",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "10", sekolah_id: "4", bulan: 2, tahun_pelajaran: "2025/2026", status: "dikirim",
-    tanggal_dibuat: "2025-02-10", catatan: "",
-    jumlah_siswa: { I: { L: 8, P: 7 }, II: { L: 9, P: 6 }, III: { L: 7, P: 8 }, IV: { L: 10, P: 5 }, V: { L: 6, P: 9 }, VI: { L: 8, P: 7 } },
-    siswa_masuk: 1, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 8, jumlah_tendik: 2,
-    kehadiran_hadir: 88, kehadiran_sakit: 2, kehadiran_izin: 1, kehadiran_alpha: 0,
-    kondisi_ruangan: "Cukup", sarana_prasarana: "Cukup",
-    meubelair: "Kurang", sumber_air_bersih: "Mata Air",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "11", sekolah_id: "5", bulan: 1, tahun_pelajaran: "2025/2026", status: "terverifikasi",
-    tanggal_dibuat: "2025-01-09", catatan: "",
-    jumlah_siswa: { I: { L: 18, P: 15 }, II: { L: 16, P: 17 }, III: { L: 15, P: 16 }, IV: { L: 17, P: 14 }, V: { L: 14, P: 18 }, VI: { L: 16, P: 15 } },
-    siswa_masuk: 0, siswa_keluar: 2, siswa_mutasi: 0,
-    jumlah_guru: 18, jumlah_tendik: 5,
-    kehadiran_hadir: 195, kehadiran_sakit: 4, kehadiran_izin: 2, kehadiran_alpha: 0,
-    kondisi_ruangan: "Baik sekali", sarana_prasarana: "Lengkap",
-    meubelair: "Cukup", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "12", sekolah_id: "5", bulan: 2, tahun_pelajaran: "2025/2026", status: "menunggu_verifikasi",
-    tanggal_dibuat: "2025-02-08", catatan: "",
-    jumlah_siswa: { I: { L: 18, P: 15 }, II: { L: 16, P: 17 }, III: { L: 15, P: 16 }, IV: { L: 17, P: 14 }, V: { L: 14, P: 18 }, VI: { L: 16, P: 15 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 18, jumlah_tendik: 5,
-    kehadiran_hadir: 192, kehadiran_sakit: 3, kehadiran_izin: 1, kehadiran_alpha: 2,
-    kondisi_ruangan: "Baik sekali", sarana_prasarana: "Lengkap",
-    meubelair: "Cukup", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "13", sekolah_id: "6", bulan: 1, tahun_pelajaran: "2025/2026", status: "dikirim",
-    tanggal_dibuat: "2025-01-10", catatan: "",
-    jumlah_siswa: { I: { L: 20, P: 18 }, II: { L: 19, P: 17 }, III: { L: 21, P: 16 }, IV: { L: 18, P: 20 }, V: { L: 17, P: 19 }, VI: { L: 19, P: 18 } },
-    siswa_masuk: 0, siswa_keluar: 1, siswa_mutasi: 0,
-    jumlah_guru: 20, jumlah_tendik: 6,
-    kehadiran_hadir: 220, kehadiran_sakit: 5, kehadiran_izin: 3, kehadiran_alpha: 0,
-    kondisi_ruangan: "Sangat baik", sarana_prasarana: "Lengkap dan modern",
-    meubelair: "Baik", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "14", sekolah_id: "6", bulan: 2, tahun_pelajaran: "2025/2026", status: "terlambat",
-    tanggal_dibuat: "2025-03-02", catatan: "Terlambat 2 minggu",
-    jumlah_siswa: { I: { L: 20, P: 18 }, II: { L: 19, P: 17 }, III: { L: 21, P: 16 }, IV: { L: 18, P: 20 }, V: { L: 17, P: 19 }, VI: { L: 19, P: 18 } },
-    siswa_masuk: 2, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 20, jumlah_tendik: 6,
-    kehadiran_hadir: 218, kehadiran_sakit: 4, kehadiran_izin: 2, kehadiran_alpha: 1,
-    kondisi_ruangan: "Sangat baik", sarana_prasarana: "Lengkap dan modern",
-    meubelair: "Baik", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "15", sekolah_id: "3", bulan: 3, tahun_pelajaran: "2025/2026", status: "draft",
-    tanggal_dibuat: "2025-03-03", catatan: "Belum selesai diisi",
-    jumlah_siswa: { I: { L: 15, P: 12 }, II: { L: 14, P: 11 }, III: { L: 13, P: 14 }, IV: { L: 12, P: 13 }, V: { L: 11, P: 12 }, VI: { L: 10, P: 11 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 14, jumlah_tendik: 4,
-    kehadiran_hadir: 0, kehadiran_sakit: 0, kehadiran_izin: 0, kehadiran_alpha: 0,
-    kondisi_ruangan: "", sarana_prasarana: "",
-    meubelair: "", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-  {
-    id: "16", sekolah_id: "1", bulan: 4, tahun_pelajaran: "2025/2026", status: "draft",
-    tanggal_dibuat: new Date().toISOString().split("T")[0], catatan: "",
-    jumlah_siswa: { I: { L: 12, P: 10 }, II: { L: 11, P: 13 }, III: { L: 14, P: 9 }, IV: { L: 10, P: 12 }, V: { L: 13, P: 11 }, VI: { L: 15, P: 8 } },
-    siswa_masuk: 0, siswa_keluar: 0, siswa_mutasi: 0,
-    jumlah_guru: 12, jumlah_tendik: 3,
-    kehadiran_hadir: 0, kehadiran_sakit: 0, kehadiran_izin: 0, kehadiran_alpha: 0,
-    kondisi_ruangan: "", sarana_prasarana: "",
-    meubelair: "", sumber_air_bersih: "PDAM",
-    catatan_sekolah: "", lampiran: [],
-  },
-];
+
 
 export default function LaporanBulananPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<LaporanBulanan[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<LaporanBulanan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/laporan")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LaporanBulanan>(defaultForm);
@@ -495,20 +329,42 @@ export default function LaporanBulananPage() {
     alert(`Cetak laporan ${sekolah?.nama} - ${getBulanName(laporan.bulan)} ${laporan.tahun_pelajaran}`);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirmDelete) return;
-    setData((prev) => prev.filter((l) => l.id !== confirmDelete));
+    try {
+      await fetch(`/api/laporan?id=${confirmDelete}`, { method: "DELETE" });
+      setData((prev) => prev.filter((l) => l.id !== confirmDelete));
+      toast.success("Laporan berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus laporan");
+    }
     setConfirmDelete(null);
   }
 
-  function handleSave() {
-    if (editingId) {
-      setData((prev) =>
-        prev.map((l) => (l.id === editingId ? { ...form, id: editingId } : l))
-      );
-    } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+  async function handleSave() {
+    try {
+      const payload = { ...form, data: JSON.stringify(form) };
+      if (editingId) {
+        const res = await fetch("/api/laporan", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const updated = await res.json();
+        setData((prev) => prev.map((l) => (l.id === editingId ? updated : l)));
+        toast.success("Laporan berhasil diperbarui");
+      } else {
+        const res = await fetch("/api/laporan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const created = await res.json();
+        setData((prev) => [...prev, created]);
+        toast.success("Laporan berhasil dibuat");
+      }
+    } catch {
+      toast.error("Gagal menyimpan laporan");
     }
     setModalOpen(false);
   }

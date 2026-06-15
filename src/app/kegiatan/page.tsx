@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
   Calendar,
@@ -75,70 +76,23 @@ const defaultForm: Kegiatan = {
   laporan: "",
 };
 
-const initialData: Kegiatan[] = [
-  {
-    id: "1", nama: "Rapat Koordinasi Kecamatan", kategori: "Rapat",
-    tanggal: "2026-01-15", waktu: "09:00", tempat: "Aula Kecamatan",
-    peserta: "Kepala Sekolah, Operator", penanggung_jawab: "Camat Lemahabang",
-    undangan: "", daftar_hadir: "", notulen: "Pembahasan program kerja semester 2", dokumentasi: "",
-    biaya: 500000, laporan: "",
-  },
-  {
-    id: "2", nama: "Pelatihan Kurikulum Merdeka", kategori: "Pelatihan",
-    tanggal: "2026-02-10", waktu: "08:30", tempat: "SD Negeri 1 Lemahabang",
-    peserta: "Guru Kelas, Guru Mapel", penanggung_jawab: "Pengawas SD",
-    undangan: "", daftar_hadir: "", notulen: "Implementasi kurikulum merdeka", dokumentasi: "",
-    biaya: 1500000, laporan: "",
-  },
-  {
-    id: "3", nama: "Sosialisasi SPMB 2026/2027", kategori: "Sosialisasi",
-    tanggal: "2026-03-05", waktu: "09:00", tempat: "Aula Kecamatan",
-    peserta: "Kepala Sekolah, Operator", penanggung_jawab: "Dinas Pendidikan",
-    undangan: "", daftar_hadir: "", notulen: "Tata cara pendaftaran SPMB", dokumentasi: "",
-    biaya: 750000, laporan: "",
-  },
-  {
-    id: "4", nama: "Workshop Pembuatan Media Ajar", kategori: "Workshop",
-    tanggal: "2026-04-12", waktu: "08:00", tempat: "SD Negeri 2 Lemahabang",
-    peserta: "Guru Kelas", penanggung_jawab: "Koordinator Wilayah",
-    undangan: "", daftar_hadir: "", notulen: "Pembuatan media ajar interaktif", dokumentasi: "",
-    biaya: 2000000, laporan: "",
-  },
-  {
-    id: "5", nama: "Lomba Peringatan Hardiknas", kategori: "Lomba",
-    tanggal: "2026-05-02", waktu: "07:30", tempat: "Lapangan Kecamatan",
-    peserta: "Siswa SD se-Kecamatan", penanggung_jawab: "Panitia Hardiknas",
-    undangan: "", daftar_hadir: "", notulen: "", dokumentasi: "",
-    biaya: 3000000, laporan: "",
-  },
-  {
-    id: "6", nama: "Rapat Pelaksanaan AKM", kategori: "Rapat",
-    tanggal: "2026-06-08", waktu: "10:00", tempat: "Kantor Korwil",
-    peserta: "Kepala Sekolah", penanggung_jawab: "Pengawas SD",
-    undangan: "", daftar_hadir: "", notulen: "Persiapan pelaksanaan AKM kelas V", dokumentasi: "",
-    biaya: 350000, laporan: "",
-  },
-  {
-    id: "7", nama: "Pelatihan Operator Dapodik", kategori: "Pelatihan",
-    tanggal: "2026-07-20", waktu: "09:00", tempat: "SD Negeri 3 Lemahabang",
-    peserta: "Operator Sekolah", penanggung_jawab: "Dinas Pendidikan",
-    undangan: "", daftar_hadir: "", notulen: "Update dapodik versi terbaru", dokumentasi: "",
-    biaya: 1200000, laporan: "",
-  },
-  {
-    id: "8", nama: "Bimtek Pengelolaan BOS", kategori: "Pelatihan",
-    tanggal: "2026-08-14", waktu: "08:30", tempat: "Aula Kecamatan",
-    peserta: "Bendahara BOS, Kepala Sekolah", penanggung_jawab: "Tim BOS Kabupaten",
-    undangan: "", daftar_hadir: "", notulen: "Petunjuk teknis penggunaan BOS 2026", dokumentasi: "",
-    biaya: 1800000, laporan: "",
-  },
-];
+
 
 export default function KegiatanPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<Kegiatan[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Kegiatan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/kegiatan")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Kegiatan>(defaultForm);
@@ -244,20 +198,41 @@ export default function KegiatanPage() {
     setModalOpen(true);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirmDelete) return;
-    setData((prev) => prev.filter((k) => k.id !== confirmDelete));
+    try {
+      await fetch(`/api/kegiatan?id=${confirmDelete}`, { method: "DELETE" });
+      setData((prev) => prev.filter((k) => k.id !== confirmDelete));
+      toast.success("Kegiatan berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus kegiatan");
+    }
     setConfirmDelete(null);
   }
 
-  function handleSave() {
-    if (editingId) {
-      setData((prev) =>
-        prev.map((k) => (k.id === editingId ? { ...form, id: editingId } : k))
-      );
-    } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+  async function handleSave() {
+    try {
+      if (editingId) {
+        const res = await fetch("/api/kegiatan", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const updated = await res.json();
+        setData((prev) => prev.map((k) => (k.id === editingId ? updated : k)));
+        toast.success("Kegiatan berhasil diperbarui");
+      } else {
+        const res = await fetch("/api/kegiatan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const created = await res.json();
+        setData((prev) => [...prev, created]);
+        toast.success("Kegiatan berhasil dibuat");
+      }
+    } catch {
+      toast.error("Gagal menyimpan kegiatan");
     }
     setModalOpen(false);
   }

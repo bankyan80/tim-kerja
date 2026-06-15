@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -48,144 +49,6 @@ interface Sekolah {
   status_aktif: StatusAktif;
 }
 
-const initialData: Sekolah[] = [
-  {
-    id: "1",
-    npsn: "69787234",
-    nama: "SD Negeri 1 Lemahabang",
-    status: "negeri",
-    alamat: "Jl. Raya Lemahabang No. 1",
-    desa: "Lemahabang",
-    kecamatan: "Lemahabang",
-    kabupaten: "Cirebon",
-    kode_pos: "45183",
-    kepala_sekolah: "Drs. Ahmad Suherman",
-    nip_kepala_sekolah: "196512311990011001",
-    operator: "Rudi Hartono",
-    no_wa: "081234567890",
-    email: "sdn1lemahabang@sch.id",
-    akreditasi: "A",
-    jumlah_rombel: 12,
-    latitude: -6.8312,
-    longitude: 108.6145,
-    status_aktif: "aktif",
-  },
-  {
-    id: "2",
-    npsn: "69787235",
-    nama: "SD Negeri 2 Lemahabang",
-    status: "negeri",
-    alamat: "Jl. Diponegoro No. 45",
-    desa: "Lemahabang",
-    kecamatan: "Lemahabang",
-    kabupaten: "Cirebon",
-    kode_pos: "45183",
-    kepala_sekolah: "Hj. Siti Maryam, S.Pd.",
-    nip_kepala_sekolah: "197001012005012002",
-    operator: "Agus Wahyudi",
-    no_wa: "081234567891",
-    email: "sdn2lemahabang@sch.id",
-    akreditasi: "A",
-    jumlah_rombel: 10,
-    latitude: -6.8325,
-    longitude: 108.6160,
-    status_aktif: "aktif",
-  },
-  {
-    id: "3",
-    npsn: "69787236",
-    nama: "SD Negeri 3 Lemahabang",
-    status: "negeri",
-    alamat: "Jl. Merdeka No. 22",
-    desa: "Lemahabang",
-    kecamatan: "Lemahabang",
-    kabupaten: "Cirebon",
-    kode_pos: "45183",
-    kepala_sekolah: "Drs. H. Edi Sumantri",
-    nip_kepala_sekolah: "196805152006041003",
-    operator: "Dede Kurniawan",
-    no_wa: "081234567892",
-    email: "sdn3lemahabang@sch.id",
-    akreditasi: "B",
-    jumlah_rombel: 8,
-    latitude: -6.8330,
-    longitude: 108.6175,
-    status_aktif: "aktif",
-  },
-  {
-    id: "4",
-    npsn: "69787237",
-    nama: "SD Negeri 4 Lemahabang",
-    status: "negeri",
-    alamat: "Jl. Pahlawan No. 10",
-    desa: "Lemahabang",
-    kecamatan: "Lemahabang",
-    kabupaten: "Cirebon",
-    kode_pos: "45183",
-    kepala_sekolah: "Ibu Yuniarti, S.Pd.",
-    nip_kepala_sekolah: "197502102007012004",
-    operator: "Fajar Nugraha",
-    no_wa: "081234567893",
-    email: "sdn4lemahabang@sch.id",
-    akreditasi: "B",
-    jumlah_rombel: 6,
-    latitude: -6.8340,
-    longitude: 108.6180,
-    status_aktif: "nonaktif",
-  },
-  {
-    id: "5",
-    npsn: "69787238",
-    nama: "MI Al-Ihsan Lemahabang",
-    status: "swasta",
-    alamat: "Jl. Cipta Karya No. 7",
-    desa: "Sindanglaut",
-    kecamatan: "Lemahabang",
-    kabupaten: "Cirebon",
-    kode_pos: "45183",
-    kepala_sekolah: "K. Ahmad Fauzi, S.Ag.",
-    nip_kepala_sekolah: "-",
-    operator: "Muhammad Rizki",
-    no_wa: "081234567894",
-    email: "mialihsan@sch.id",
-    akreditasi: "A",
-    jumlah_rombel: 9,
-    latitude: -6.8350,
-    longitude: 108.6190,
-    status_aktif: "aktif",
-  },
-  {
-    id: "6",
-    npsn: "69787239",
-    nama: "SD Islam Terpadu Bina Cendekia",
-    status: "swasta",
-    alamat: "Jl. Raya Sigong No. 15",
-    desa: "Sigong",
-    kecamatan: "Lemahabang",
-    kabupaten: "Cirebon",
-    kode_pos: "45183",
-    kepala_sekolah: "Dra. Hj. Nurhayati",
-    nip_kepala_sekolah: "-",
-    operator: "Indra Lesmana",
-    no_wa: "081234567895",
-    email: "itbinacendekia@sch.id",
-    akreditasi: "Belum",
-    jumlah_rombel: 4,
-    latitude: -6.8360,
-    longitude: 108.6200,
-    status_aktif: "aktif",
-  },
-];
-
-function formatNamaSekolah(nama: string) {
-  return nama
-    .replace(/\bSd\b/gi, "SD")
-    .replace(/\bMi\b/gi, "MI")
-    .replace(/\bSmp\b/gi, "SMP")
-    .replace(/\bSma\b/gi, "SMA")
-    .replace(/\bSmk\b/gi, "SMK");
-}
-
 const defaultForm: Sekolah = {
   id: "",
   npsn: "",
@@ -211,14 +74,18 @@ const defaultForm: Sekolah = {
 export default function DataSekolahPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<Sekolah[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Sekolah[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Sekolah>(defaultForm);
   const [viewing, setViewing] = useState<Sekolah | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterAkreditasi, setFilterAkreditasi] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/sekolah").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -310,6 +177,10 @@ export default function DataSekolahPage() {
     },
   ];
 
+  function formatNamaSekolah(nama: string) {
+    return nama.replace(/\bSd\b/gi, "SD").replace(/\bMi\b/gi, "MI").replace(/\bSmp\b/gi, "SMP").replace(/\bSma\b/gi, "SMA").replace(/\bSmk\b/gi, "SMK");
+  }
+
   function openAddModal() {
     setEditingId(null);
     setForm(defaultForm);
@@ -322,21 +193,35 @@ export default function DataSekolahPage() {
     setModalOpen(true);
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     if (confirm("Yakin ingin menghapus data sekolah ini?")) {
+      await fetch(`/api/sekolah?id=${id}`, { method: "DELETE" });
       setData((prev) => prev.filter((s) => s.id !== id));
+      toast.success("Sekolah berhasil dihapus");
     }
   }
 
-  function handleSave() {
+  async function handleSave() {
     const namaFormatted = formatNamaSekolah(form.nama);
     if (editingId) {
-      setData((prev) =>
-        prev.map((s) => (s.id === editingId ? { ...form, nama: namaFormatted, id: editingId } : s))
-      );
+      const res = await fetch("/api/sekolah", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, id: editingId, nama: namaFormatted }),
+      });
+      if (res.ok) {
+        setData((prev) => prev.map((s) => (s.id === editingId ? { ...form, nama: namaFormatted, id: editingId } : s)));
+        toast.success("Sekolah berhasil diupdate");
+      }
     } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, nama: namaFormatted, id: newId }]);
+      const res = await fetch("/api/sekolah", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, nama: namaFormatted }),
+      });
+      if (res.ok) {
+        const newId = String(Date.now());
+        setData((prev) => [...prev, { ...form, nama: namaFormatted, id: newId }]);
+        toast.success("Sekolah berhasil ditambahkan");
+      }
     }
     setModalOpen(false);
   }

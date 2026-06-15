@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 type SuratMasuk = {
   id: string;
@@ -61,19 +62,13 @@ const statusVariant: Record<string, "warning" | "info" | "default" | "success" |
   diarsipkan: "danger",
 };
 
-const demoData: SuratMasuk[] = [
-  { id: "1", nomor_agenda: "001", nomor_surat: "421/101/Disdik", tanggal_surat: "2026-06-01", tanggal_diterima: "2026-06-02", asal_surat: "Dinas Pendidikan", perihal: "Undangan Rapat Koordinasi", klasifikasi: "penting", status: "diproses", catatan: "" },
-  { id: "2", nomor_agenda: "002", nomor_surat: "422/55/BPS", tanggal_surat: "2026-06-03", tanggal_diterima: "2026-06-04", asal_surat: "BPS Kabupaten", perihal: "Permohonan Data GTK", klasifikasi: "biasa", status: "draft", catatan: "" },
-  { id: "3", nomor_agenda: "003", nomor_surat: "423/20/Kemendikbud", tanggal_surat: "2026-06-05", tanggal_diterima: "2026-06-05", asal_surat: "Kemendikbud", perihal: "Surat Edaran SPMB 2025/2026", klasifikasi: "penting", status: "selesai", catatan: "Sudah ditindaklanjuti" },
-  { id: "4", nomor_agenda: "004", nomor_surat: "424/33/BPMP", tanggal_surat: "2026-06-07", tanggal_diterima: "2026-06-08", asal_surat: "BPMP Provinsi", perihal: "Monitoring dan Evaluasi", klasifikasi: "rahasia", status: "dikirim", catatan: "" },
-  { id: "5", nomor_agenda: "005", nomor_surat: "425/12/Disdik", tanggal_surat: "2026-06-10", tanggal_diterima: "2026-06-10", asal_surat: "Dinas Pendidikan", perihal: "Pemberitahuan Bimtek Kurikulum", klasifikasi: "biasa", status: "diarsipkan", catatan: "" },
-];
+
 
 export default function SuratMasukPage() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [data, setData] = useState<SuratMasuk[]>(demoData);
-  const [loading] = useState(false);
+  const [data, setData] = useState<SuratMasuk[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -81,6 +76,10 @@ export default function SuratMasukPage() {
     id: "", nomor_agenda: "", nomor_surat: "", tanggal_surat: "", tanggal_diterima: "",
     asal_surat: "", perihal: "", klasifikasi: "biasa", status: "draft", catatan: "",
   });
+
+  useEffect(() => {
+    fetch("/api/surat?jenis=masuk").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const resetForm = () => {
     setForm({ id: "", nomor_agenda: "", nomor_surat: "", tanggal_surat: "", tanggal_diterima: "", asal_surat: "", perihal: "", klasifikasi: "biasa", status: "draft", catatan: "" });
@@ -101,23 +100,26 @@ export default function SuratMasukPage() {
     setModalMode("view");
   };
 
-  const handleSave = () => {
-    if (modalMode === "add") {
-      const newItem = { ...form, id: String(Date.now()) };
-      setData((prev) => [newItem, ...prev]);
-    } else if (modalMode === "edit") {
-      setData((prev) => prev.map((d) => (d.id === form.id ? form : d)));
+  async function handleSave() {
+    const payload = { ...form, jenis: "masuk" };
+    if (modalMode === "edit") {
+      const res = await fetch("/api/surat", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, id: form.id }) });
+      if (res.ok) { setData((prev) => prev.map((d) => (d.id === form.id ? { ...payload, id: form.id } : d))); toast.success("Data berhasil diupdate"); }
+    } else {
+      const res = await fetch("/api/surat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [{ ...payload, id: newId }, ...prev]); toast.success("Data berhasil ditambahkan"); }
     }
     setModalMode(null);
-    resetForm();
-  };
+  }
 
-  const handleDelete = () => {
+  async function handleDelete() {
     if (deleteId) {
+      await fetch(`/api/surat?id=${deleteId}`, { method: "DELETE" });
       setData((prev) => prev.filter((d) => d.id !== deleteId));
       setDeleteId(null);
+      toast.success("Data berhasil dihapus");
     }
-  };
+  }
 
   const filteredData = data.filter(
     (d) =>

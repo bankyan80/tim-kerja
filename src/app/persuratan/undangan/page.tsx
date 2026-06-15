@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateShort } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 type Undangan = {
   id: string;
@@ -56,25 +57,23 @@ const tabs = [
   { label: "Buku Agenda", href: "/persuratan/buku-agenda" },
 ];
 
-const demoData: Undangan[] = [
-  { id: "1", nomor_undangan: "421/101/Disdik", tanggal: "2026-06-10", pengirim: "Dinas Pendidikan", perihal: "Rapat Koordinasi Bidang SD", acara: "Rapat Koordinasi", tempat: "Aula Dinas Pendidikan", waktu: "09:00", peserta: "Kepala Bidang SD, Staf Bidang SD", status: "dikirim", catatan: "" },
-  { id: "2", nomor_undangan: "422/55/BPS", tanggal: "2026-06-12", pengirim: "BPS Kabupaten", perihal: "Sosialisasi Pendataan", acara: "Sosialisasi", tempat: "Gedung BPS", waktu: "08:30", peserta: "Staf Data GTK", status: "dikonfirmasi", catatan: "Konfirmasi sudah diterima" },
-  { id: "3", nomor_undangan: "423/20/Kemendikbud", tanggal: "2026-06-15", pengirim: "Kemendikbud", perihal: "Bimtek SPMB", acara: "Bimbingan Teknis", tempat: "Hotel Grand", waktu: "07:30", peserta: "Kepala Bidang SD", status: "selesai", catatan: "Sudah dilaksanakan" },
-  { id: "4", nomor_undangan: "424/33/BPMP", tanggal: "2026-06-18", pengirim: "BPMP Provinsi", perihal: "Monitoring dan Evaluasi", acara: "Monev", tempat: "Kantor BPMP", waktu: "09:00", peserta: "Tim Monitoring", status: "draft", catatan: "" },
-  { id: "5", nomor_undangan: "425/12/Disdik", tanggal: "2026-06-20", pengirim: "Dinas Pendidikan", perihal: "Halal Bihalal", acara: "Halal Bihalal", tempat: "Halaman Kantor", waktu: "08:00", peserta: "Seluruh Staf", status: "dibatalkan", catatan: "Dibatalkan karena bencana" },
-];
+
 
 export default function UndanganPage() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [data, setData] = useState<Undangan[]>(demoData);
-  const [loading] = useState(false);
+  const [data, setData] = useState<Undangan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Undangan>({
     id: "", nomor_undangan: "", tanggal: "", pengirim: "", perihal: "", acara: "",
     tempat: "", waktu: "", peserta: "", status: "draft", catatan: "",
   });
+
+  useEffect(() => {
+    fetch("/api/surat?jenis=undangan").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const resetForm = () => {
     setForm({ id: "", nomor_undangan: "", tanggal: "", pengirim: "", perihal: "", acara: "", tempat: "", waktu: "", peserta: "", status: "draft", catatan: "" });
@@ -84,22 +83,26 @@ export default function UndanganPage() {
   const openEdit = (item: Undangan) => { setForm({ ...item }); setModalMode("edit"); };
   const openView = (item: Undangan) => { setForm({ ...item }); setModalMode("view"); };
 
-  const handleSave = () => {
-    if (modalMode === "add") {
-      setData((prev) => [{ ...form, id: String(Date.now()) }, ...prev]);
-    } else if (modalMode === "edit") {
-      setData((prev) => prev.map((d) => (d.id === form.id ? form : d)));
+  async function handleSave() {
+    const payload = { ...form, jenis: "undangan" };
+    if (modalMode === "edit") {
+      const res = await fetch("/api/surat", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, id: form.id }) });
+      if (res.ok) { setData((prev) => prev.map((d) => (d.id === form.id ? { ...payload, id: form.id } : d))); toast.success("Data berhasil diupdate"); }
+    } else {
+      const res = await fetch("/api/surat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [{ ...payload, id: newId }, ...prev]); toast.success("Data berhasil ditambahkan"); }
     }
     setModalMode(null);
-    resetForm();
-  };
+  }
 
-  const handleDelete = () => {
+  async function handleDelete() {
     if (deleteId) {
+      await fetch(`/api/surat?id=${deleteId}`, { method: "DELETE" });
       setData((prev) => prev.filter((d) => d.id !== deleteId));
       setDeleteId(null);
+      toast.success("Data berhasil dihapus");
     }
-  };
+  }
 
   const columns: ColumnDef<Undangan>[] = [
     { header: "No Undangan", accessorKey: "nomor_undangan" },

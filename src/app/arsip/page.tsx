@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
   Archive,
@@ -120,81 +121,23 @@ const defaultForm: Arsip = {
   riwayat_versi: [],
 };
 
-const initialData: Arsip[] = [
-  {
-    id: "1", jenis_dokumen: "Surat", sekolah_id: "1", bulan: 1, tahun: 2026,
-    pemilik: "Operator SDN 1", file: "surat_undangan_rapat.pdf", versi: 1,
-    tanggal_upload: "2026-01-10", file_size: "1.2 MB", catatan: "Undangan rapat koordinasi",
-    riwayat_versi: [],
-  },
-  {
-    id: "2", jenis_dokumen: "Laporan", sekolah_id: "1", bulan: 2, tahun: 2026,
-    pemilik: "Kepala Sekolah", file: "laporan_bulanan_februari.docx", versi: 2,
-    tanggal_upload: "2026-02-15", file_size: "2.5 MB", catatan: "",
-    riwayat_versi: [
-      { versi: 1, file: "laporan_bulanan_februari_v1.docx", tanggal_upload: "2026-02-10", file_size: "2.3 MB" },
-    ],
-  },
-  {
-    id: "3", jenis_dokumen: "SK", sekolah_id: "2", bulan: 3, tahun: 2025,
-    pemilik: "Dinas Pendidikan", file: "sk_pengawas_sekolah.pdf", versi: 1,
-    tanggal_upload: "2025-03-01", file_size: "800 KB", catatan: "SK Pengawas SD",
-    riwayat_versi: [],
-  },
-  {
-    id: "4", jenis_dokumen: "Dokumen Siswa", sekolah_id: "3", bulan: 7, tahun: 2025,
-    pemilik: "Tata Usaha", file: "data_siswa_baru.xlsx", versi: 1,
-    tanggal_upload: "2025-07-20", file_size: "3.1 MB", catatan: "",
-    riwayat_versi: [],
-  },
-  {
-    id: "5", jenis_dokumen: "Dokumen GTK", sekolah_id: "4", bulan: 8, tahun: 2025,
-    pemilik: "Operator GTK", file: "daftar_gtt_pts.pdf", versi: 1,
-    tanggal_upload: "2025-08-12", file_size: "1.5 MB", catatan: "Daftar Guru Tidak Tetap",
-    riwayat_versi: [],
-  },
-  {
-    id: "6", jenis_dokumen: "Sarpras", sekolah_id: "5", bulan: 9, tahun: 2025,
-    pemilik: "Sarpras", file: "inventaris_ruangan.xlsx", versi: 2,
-    tanggal_upload: "2025-09-05", file_size: "4.2 MB", catatan: "Update inventaris kelas",
-    riwayat_versi: [
-      { versi: 1, file: "inventaris_ruangan_v1.xlsx", tanggal_upload: "2025-08-01", file_size: "3.8 MB" },
-    ],
-  },
-  {
-    id: "7", jenis_dokumen: "SPMB", sekolah_id: "6", bulan: 10, tahun: 2025,
-    pemilik: "Panitia SPMB", file: "rekap_pendaftar_spmb.pdf", versi: 1,
-    tanggal_upload: "2025-10-15", file_size: "2.0 MB", catatan: "",
-    riwayat_versi: [],
-  },
-  {
-    id: "8", jenis_dokumen: "Kegiatan", sekolah_id: "1", bulan: 11, tahun: 2025,
-    pemilik: "Panitia", file: "proposal_kegiatan_lomba.docx", versi: 1,
-    tanggal_upload: "2025-11-01", file_size: "1.8 MB", catatan: "Proposal lomba Hardiknas",
-    riwayat_versi: [],
-  },
-  {
-    id: "9", jenis_dokumen: "Monitoring", sekolah_id: "2", bulan: 12, tahun: 2025,
-    pemilik: "Pengawas", file: "laporan_monitoring_akm.pdf", versi: 1,
-    tanggal_upload: "2025-12-10", file_size: "2.7 MB", catatan: "",
-    riwayat_versi: [],
-  },
-  {
-    id: "10", jenis_dokumen: "Laporan", sekolah_id: "3", bulan: 6, tahun: 2026,
-    pemilik: "Bendahara BOS", file: "laporan_bos_triwulan_2.pdf", versi: 3,
-    tanggal_upload: "2026-06-20", file_size: "5.0 MB", catatan: "Revisi setelah verifikasi",
-    riwayat_versi: [
-      { versi: 1, file: "laporan_bos_triwulan_2_v1.pdf", tanggal_upload: "2026-06-10", file_size: "4.5 MB" },
-      { versi: 2, file: "laporan_bos_triwulan_2_v2.pdf", tanggal_upload: "2026-06-15", file_size: "4.8 MB" },
-    ],
-  },
-];
+
 
 export default function ArsipPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<Arsip[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Arsip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/arsip")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Arsip>(defaultForm);
@@ -322,26 +265,45 @@ export default function ArsipPage() {
     alert(`Mengunduh: ${arsip.file} (${arsip.file_size})`);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirmDelete) return;
-    setData((prev) => prev.filter((a) => a.id !== confirmDelete));
+    try {
+      await fetch(`/api/arsip?id=${confirmDelete}`, { method: "DELETE" });
+      setData((prev) => prev.filter((a) => a.id !== confirmDelete));
+      toast.success("Arsip berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus arsip");
+    }
     setConfirmDelete(null);
   }
 
-  function handleSave() {
-    const payload = {
-      ...form,
-      versi: editingId
-        ? form.versi
-        : 1,
-    };
-    if (editingId) {
-      setData((prev) =>
-        prev.map((a) => (a.id === editingId ? { ...payload, id: editingId } : a))
-      );
-    } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...payload, id: newId }]);
+  async function handleSave() {
+    try {
+      const payload = {
+        ...form,
+        versi: editingId ? form.versi : 1,
+      };
+      if (editingId) {
+        const res = await fetch("/api/arsip", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const updated = await res.json();
+        setData((prev) => prev.map((a) => (a.id === editingId ? updated : a)));
+        toast.success("Arsip berhasil diperbarui");
+      } else {
+        const res = await fetch("/api/arsip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const created = await res.json();
+        setData((prev) => [...prev, created]);
+        toast.success("Arsip berhasil dibuat");
+      }
+    } catch {
+      toast.error("Gagal menyimpan arsip");
     }
     setModalOpen(false);
   }

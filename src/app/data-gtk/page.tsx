@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import toast from "react-hot-toast";
 import {
   GraduationCap,
   Plus,
@@ -92,116 +93,7 @@ const pendidikanOptions = [
   "S3",
 ];
 
-const initialData: GTK[] = [
-  {
-    id: "1", nik: "3209124509120101", nip: "198705102010011001", nuptk: "1234567890",
-    nama: "Dr. H. Ahmad Syarifudin, M.Pd.", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1985-05-10",
-    status_pegawai: "PNS", jabatan: "Kepala Sekolah", jenis_gtk: "Kepala Sekolah",
-    sekolah_id: "1", pangkat_golongan: "IV/a", pendidikan_terakhir: "S2",
-    sertifikasi: true, nrg: "NRG001", masa_kerja: 18, tmt: "2005-07-01",
-    nomor_sk: "SK.001/V/2025", bup: "2040-05-10", kontak: "081234567101", status_aktif: "aktif",
-  },
-  {
-    id: "2", nik: "3209124509120102", nip: "199003102014112002", nuptk: "2345678901",
-    nama: "Dra. Siti Khodijah, M.Si.", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1990-03-10",
-    status_pegawai: "PNS", jabatan: "Guru Kelas", jenis_gtk: "Guru",
-    sekolah_id: "1", pangkat_golongan: "III/d", pendidikan_terakhir: "S2",
-    sertifikasi: true, nrg: "NRG002", masa_kerja: 12, tmt: "2012-07-01",
-    nomor_sk: "SK.002/V/2025", bup: "2045-03-10", kontak: "081234567102", status_aktif: "aktif",
-  },
-  {
-    id: "3", nik: "3209124509120103", nip: "199208152019031003", nuptk: "3456789012",
-    nama: "Rudi Hartono, S.Pd.", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1992-08-15",
-    status_pegawai: "PPPK", jabatan: "Guru PJOK", jenis_gtk: "Guru",
-    sekolah_id: "1", pangkat_golongan: "IX", pendidikan_terakhir: "S1",
-    sertifikasi: true, nrg: "NRG003", masa_kerja: 6, tmt: "2019-03-01",
-    nomor_sk: "SK.003/V/2025", bup: "2047-08-15", kontak: "081234567103", status_aktif: "aktif",
-  },
-  {
-    id: "4", nik: "3209124509120104", nip: "", nuptk: "4567890123",
-    nama: "Nurhayati, S.Pd.I.", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1995-01-20",
-    status_pegawai: "PPPK Paruh Waktu", jabatan: "Guru PAI", jenis_gtk: "Guru",
-    sekolah_id: "2", pangkat_golongan: "-", pendidikan_terakhir: "S1",
-    sertifikasi: false, nrg: "", masa_kerja: 3, tmt: "2022-01-01",
-    nomor_sk: "SK.004/V/2025", bup: "", kontak: "081234567104", status_aktif: "aktif",
-  },
-  {
-    id: "5", nik: "3209124509120105", nip: "", nuptk: "5678901234",
-    nama: "Asep Saepullah, S.Pd.", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1993-11-25",
-    status_pegawai: "Honorer", jabatan: "Guru Kelas", jenis_gtk: "Guru",
-    sekolah_id: "2", pangkat_golongan: "-", pendidikan_terakhir: "S1",
-    sertifikasi: false, nrg: "", masa_kerja: 4, tmt: "2020-07-15",
-    nomor_sk: "SK.005/V/2025", bup: "", kontak: "081234567105", status_aktif: "aktif",
-  },
-  {
-    id: "6", nik: "3209124509120106", nip: "197806152008011004", nuptk: "6789012345",
-    nama: "Drs. H. Mulyadi, M.M.Pd.", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1978-06-15",
-    status_pegawai: "PNS", jabatan: "Kepala Sekolah", jenis_gtk: "Kepala Sekolah",
-    sekolah_id: "3", pangkat_golongan: "IV/b", pendidikan_terakhir: "S2",
-    sertifikasi: true, nrg: "NRG004", masa_kerja: 20, tmt: "2004-01-01",
-    nomor_sk: "SK.006/V/2025", bup: "2033-06-15", kontak: "081234567106", status_aktif: "aktif",
-  },
-  {
-    id: "7", nik: "3209124509120107", nip: "199102172015052002", nuptk: "7890123456",
-    nama: "Rina Marlina, S.Pd.", jenis_kelamin: "P",
-    tempat_lahir: "Jakarta", tanggal_lahir: "1991-02-17",
-    status_pegawai: "PNS", jabatan: "Guru Bahasa Inggris", jenis_gtk: "Guru",
-    sekolah_id: "4", pangkat_golongan: "III/c", pendidikan_terakhir: "S1",
-    sertifikasi: true, nrg: "NRG005", masa_kerja: 10, tmt: "2015-05-01",
-    nomor_sk: "SK.007/V/2025", bup: "2046-02-17", kontak: "081234567107", status_aktif: "aktif",
-  },
-  {
-    id: "8", nik: "3209124509120108", nip: "", nuptk: "8901234567",
-    nama: "Dewi Sartika, A.Md.", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1996-09-05",
-    status_pegawai: "Tenaga Kependidikan", jabatan: "Tenaga Administrasi", jenis_gtk: "Tenaga Kependidikan",
-    sekolah_id: "1", pangkat_golongan: "-", pendidikan_terakhir: "D3",
-    sertifikasi: false, nrg: "", masa_kerja: 3, tmt: "2021-08-01",
-    nomor_sk: "SK.008/V/2025", bup: "", kontak: "081234567108", status_aktif: "aktif",
-  },
-  {
-    id: "9", nik: "3209124509120109", nip: "198803202014112003", nuptk: "9012345678",
-    nama: "Fitri Handayani, S.Pd.", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1988-03-20",
-    status_pegawai: "GTT", jabatan: "Guru Kelas", jenis_gtk: "Guru",
-    sekolah_id: "5", pangkat_golongan: "-", pendidikan_terakhir: "S1",
-    sertifikasi: false, nrg: "", masa_kerja: 8, tmt: "2016-07-15",
-    nomor_sk: "SK.009/V/2025", bup: "", kontak: "081234567109", status_aktif: "aktif",
-  },
-  {
-    id: "10", nik: "3209124509120110", nip: "", nuptk: "0123456789",
-    nama: "Gilang Ramadan, S.Pd.", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1994-12-01",
-    status_pegawai: "Honorer", jabatan: "Guru Matematika", jenis_gtk: "Guru",
-    sekolah_id: "6", pangkat_golongan: "-", pendidikan_terakhir: "S1",
-    sertifikasi: false, nrg: "", masa_kerja: 2, tmt: "2023-07-01",
-    nomor_sk: "SK.010/V/2025", bup: "", kontak: "081234567110", status_aktif: "aktif",
-  },
-  {
-    id: "11", nik: "3209124509120111", nip: "198201152009042001", nuptk: "1122334455",
-    nama: "Hj. Yuni Rahmawati, S.Pd., M.Pd.", jenis_kelamin: "P",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1982-01-15",
-    status_pegawai: "PNS", jabatan: "Guru Kelas", jenis_gtk: "Guru",
-    sekolah_id: "1", pangkat_golongan: "IV/a", pendidikan_terakhir: "S2",
-    sertifikasi: true, nrg: "NRG006", masa_kerja: 16, tmt: "2009-01-01",
-    nomor_sk: "SK.011/V/2025", bup: "2037-01-15", kontak: "081234567111", status_aktif: "nonaktif",
-  },
-  {
-    id: "12", nik: "3209124509120112", nip: "", nuptk: "2233445566",
-    nama: "Budi Santoso, S.Pd.", jenis_kelamin: "L",
-    tempat_lahir: "Cirebon", tanggal_lahir: "1997-04-18",
-    status_pegawai: "GTY", jabatan: "Guru PAI", jenis_gtk: "Guru",
-    sekolah_id: "3", pangkat_golongan: "-", pendidikan_terakhir: "S1",
-    sertifikasi: false, nrg: "", masa_kerja: 1, tmt: "2024-01-15",
-    nomor_sk: "SK.012/V/2025", bup: "", kontak: "081234567112", status_aktif: "aktif",
-  },
-];
+
 
 const defaultForm: GTK = {
   id: "",
@@ -231,18 +123,22 @@ const defaultForm: GTK = {
 export default function DataGTKPage() {
   const { data: session } = useSession();
 
-  const [data, setData] = useState<GTK[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<GTK[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<GTK>(defaultForm);
   const [viewing, setViewing] = useState<GTK | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
   const [search, setSearch] = useState("");
   const [filterSekolah, setFilterSekolah] = useState("");
   const [filterStatusPegawai, setFilterStatusPegawai] = useState("");
   const [filterJabatan, setFilterJabatan] = useState("");
   const [filterStatusAktif, setFilterStatusAktif] = useState("");
+
+  useEffect(() => {
+    fetch("/api/gtk").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -362,7 +258,7 @@ export default function DataGTKPage() {
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setConfirmDelete(row.original.id)}
+            onClick={() => handleDelete(row.original.id)}
             className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Hapus"
           >
@@ -385,18 +281,27 @@ export default function DataGTKPage() {
     setModalOpen(true);
   }
 
-  function handleDelete() {
-    if (!confirmDelete) return;
-    setData((prev) => prev.filter((g) => g.id !== confirmDelete));
-    setConfirmDelete(null);
+  async function handleDelete(id: string) {
+    if (confirm("Yakin ingin menghapus data GTK ini?")) {
+      await fetch(`/api/gtk?id=${id}`, { method: "DELETE" });
+      setData((prev) => prev.filter((g) => g.id !== id));
+      toast.success("GTK berhasil dihapus");
+    }
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (editingId) {
-      setData((prev) => prev.map((g) => (g.id === editingId ? { ...form, id: editingId } : g)));
+      const res = await fetch("/api/gtk", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, sertifikasi: form.sertifikasi ? 1 : 0 }),
+      });
+      if (res.ok) { setData((prev) => prev.map((g) => (g.id === editingId ? { ...form, id: editingId } : g))); toast.success("GTK berhasil diupdate"); }
     } else {
-      const newId = String(Date.now());
-      setData((prev) => [...prev, { ...form, id: newId }]);
+      const res = await fetch("/api/gtk", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, sertifikasi: form.sertifikasi ? 1 : 0 }),
+      });
+      if (res.ok) { const newId = String(Date.now()); setData((prev) => [...prev, { ...form, id: newId }]); toast.success("GTK berhasil ditambahkan"); }
     }
     setModalOpen(false);
   }
@@ -711,21 +616,7 @@ export default function DataGTKPage() {
         )}
       </Modal>
 
-      {/* Modal Confirm Delete */}
-      <Modal
-        open={!!confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        title="Konfirmasi Hapus"
-        size="sm"
-      >
-        <p className="text-sm text-gray-600">
-          Apakah Anda yakin ingin menghapus data GTK ini? Tindakan ini tidak dapat dibatalkan.
-        </p>
-        <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" onClick={() => setConfirmDelete(null)}>Batal</Button>
-          <Button variant="danger" onClick={handleDelete}>Hapus</Button>
-        </div>
-      </Modal>
+
     </div>
   );
 }
