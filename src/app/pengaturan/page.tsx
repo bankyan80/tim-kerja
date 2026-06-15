@@ -194,14 +194,17 @@ export default function PengaturanPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [usersRes, settingsRes] = await Promise.all([
+        const [usersRes, settingsRes, profileRes] = await Promise.all([
           fetch("/api/pengaturan"),
           fetch("/api/pengaturan/settings"),
+          fetch("/api/pengaturan/profile"),
         ]);
         const usersData = await usersRes.json();
         const settingsData = await settingsRes.json();
         if (Array.isArray(usersData)) setUsers(usersData);
         if (settingsData && !settingsData.error) setSettings(settingsData);
+        const profileData = await profileRes.json();
+        if (profileData?.foto) setFotoPreview(profileData.foto);
       } catch {
         setUsers([]);
       } finally {
