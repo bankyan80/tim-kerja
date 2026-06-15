@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sistem Kerja Bidang SD</string>
+    <string name="title_activity_main">Sistem Kerja Bidang SD</string>
+    <string name="package_name">id.go.cirebon.timkerja.bidangsd</string>
+    <string name="custom_url_scheme">id.go.cirebon.timkerja.bidangsd</string>
+</resources>

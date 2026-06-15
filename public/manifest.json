@@ -1,0 +1,23 @@
+{
+  "name": "Sistem Kerja Bidang SD",
+  "short_name": "Bidang SD",
+  "description": "Sistem informasi manajemen bidang Sekolah Dasar - Tim Kerja Kecamatan Lemahabang Kabupaten Cirebon",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/uploads/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/uploads/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
