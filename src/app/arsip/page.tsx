@@ -49,11 +49,10 @@ interface Arsip {
   tahun: number;
   pemilik: string;
   file: string;
+  file_name: string;
   versi: number;
   tanggal_upload: string;
-  file_size: string;
-  catatan: string;
-  riwayat_versi: VersiArsip[];
+  sekolah_nama?: string;
 }
 
 interface SekolahOption {
@@ -107,11 +106,10 @@ const defaultForm: Arsip = {
   tahun: new Date().getFullYear(),
   pemilik: "",
   file: "",
+  file_name: "",
   versi: 1,
   tanggal_upload: new Date().toISOString().split("T")[0],
-  file_size: "",
-  catatan: "",
-  riwayat_versi: [],
+  sekolah_nama: "",
 };
 
 
@@ -123,14 +121,15 @@ export default function ArsipPage() {
   const [loading, setLoading] = useState(true);
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
-  useEffect(() => {
+  function fetchList() {
     fetch("/api/arsip")
       .then((r) => r.json())
-      .then((d) => {
-        setData(d);
-        setLoading(false);
-      })
+      .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    fetchList();
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
   }, []);
   const [modalOpen, setModalOpen] = useState(false);
@@ -149,9 +148,9 @@ export default function ArsipPage() {
       const q = search.toLowerCase();
       result = result.filter(
         (a) =>
-          a.file.toLowerCase().includes(q) ||
+          (a.file_name || "").toLowerCase().includes(q) ||
           a.pemilik.toLowerCase().includes(q) ||
-          a.catatan.toLowerCase().includes(q)
+          a.jenis_dokumen.toLowerCase().includes(q)
       );
     }
     if (filterJenisDokumen) {
@@ -181,28 +180,20 @@ export default function ArsipPage() {
       },
     },
     {
+      header: "Nama File",
+      accessorKey: "file_name",
+      cell: ({ row }) => (
+        <span className="text-xs truncate max-w-[200px] block" title={row.original.file_name}>
+          {row.original.file_name || "-"}
+        </span>
+      ),
+    },
+    {
       header: "Sekolah",
-      accessorKey: "sekolah_id",
-      cell: ({ row }) => {
-        const sekolah = sekolahList.find((s) => s.id === row.original.sekolah_id);
-        return sekolah?.nama || "-";
-      },
-    },
-    {
-      header: "Bulan",
-      accessorKey: "bulan",
-      cell: ({ row }) => getBulanName(row.original.bulan),
-    },
-    {
-      header: "Tahun",
-      accessorKey: "tahun",
+      accessorKey: "sekolah_nama",
+      cell: ({ row }) => row.original.sekolah_nama || "-",
     },
     { header: "Pemilik", accessorKey: "pemilik" },
-    {
-      header: "Versi",
-      accessorKey: "versi",
-      cell: ({ row }) => `v${row.original.versi}`,
-    },
     {
       header: "Tanggal Upload",
       accessorKey: "tanggal_upload",
@@ -257,11 +248,7 @@ export default function ArsipPage() {
   }
 
   function handleDownload(arsip: Arsip) {
-    if (arsip.file.startsWith("http")) {
-      window.open(arsip.file, "_blank");
-    } else {
-      alert(`Mengunduh: ${arsip.file} (${arsip.file_size})`);
-    }
+    window.open(`/api/arsip?id=${arsip.id}&download=1`, "_blank");
   }
 
   async function handleDelete() {
@@ -278,21 +265,22 @@ export default function ArsipPage() {
 
   async function handleSave() {
     try {
-      const payload = (({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, file_size, versi, catatan }) => ({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, file_size, versi: editingId ? form.versi : 1, catatan: catatan || "" }))(form);
+      const { id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file } = form;
+      const payload = { jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, versi: editingId ? form.versi : 1, file_name: form.file_name || "" };
       if (editingId) {
         const res = await fetch("/api/arsip", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ id: editingId, ...payload }),
         });
-        if (res.ok) { setData((prev) => prev.map((a) => (a.id === editingId ? { ...form, id: editingId } : a))); toast.success("Arsip berhasil diperbarui"); }
+        if (res.ok) { toast.success("Arsip berhasil diperbarui"); fetchList(); }
       } else {
         const res = await fetch("/api/arsip", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (res.ok) { toast.success("Arsip berhasil dibuat"); fetch("/api/arsip").then(r => r.json()).then(d => setData(d)); }
+        if (res.ok) { toast.success("Arsip berhasil dibuat"); fetchList(); }
       }
     } catch {
       toast.error("Gagal menyimpan arsip");
@@ -441,10 +429,14 @@ export default function ArsipPage() {
               id="file"
               type="file"
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  updateForm("file", file.name);
-                  updateForm("file_size", `${(file.size / (1024 * 1024)).toFixed(1)} MB`);
+                const f = e.target.files?.[0];
+                if (f) {
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    updateForm("file", reader.result as string);
+                    updateForm("file_name", f.name);
+                  };
+                  reader.readAsDataURL(f);
                 }
               }}
             />
@@ -463,80 +455,9 @@ export default function ArsipPage() {
         open={!!viewing}
         onClose={() => setViewing(null)}
         title="Detail Arsip"
-        size="lg"
+        size="full"
       >
-        {viewing && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <DetailField
-                label="Jenis Dokumen"
-                value={<Badge variant={jenisDokumenBadge[viewing.jenis_dokumen].variant}>{viewing.jenis_dokumen}</Badge>}
-              />
-              <DetailField
-                label="Sekolah"
-                value={sekolahList.find((s) => s.id === viewing.sekolah_id)?.nama || "-"}
-              />
-              <DetailField label="Bulan" value={getBulanName(viewing.bulan)} />
-              <DetailField label="Tahun" value={viewing.tahun} />
-              <DetailField label="Pemilik" value={viewing.pemilik} />
-              <DetailField label="File" value={viewing.file} />
-              {viewing.file.startsWith("http") ? (
-                <a href={viewing.file} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Buka Link Drive</a>
-              ) : (
-                <DetailField label="Ukuran File" value={viewing.file_size} />
-              )}
-              <DetailField label="Versi" value={`v${viewing.versi}`} />
-              <DetailField label="Tanggal Upload" value={formatDate(viewing.tanggal_upload)} />
-            </div>
-            {viewing.catatan && (
-              <DetailField label="Catatan" value={viewing.catatan} />
-            )}
-
-            {/* Riwayat Versi */}
-            {viewing.riwayat_versi.length > 0 && (
-              <div className="border rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-800 mb-2">Riwayat Versi</h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead>
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Versi</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">File</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Ukuran</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Tanggal Upload</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {[...viewing.riwayat_versi].reverse().map((v) => (
-                        <tr key={v.versi} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 font-medium">v{v.versi}</td>
-                          <td className="px-3 py-2">{v.file}</td>
-                          <td className="px-3 py-2">{v.file_size}</td>
-                          <td className="px-3 py-2">{formatDate(v.tanggal_upload)}</td>
-                          <td className="px-3 py-2 text-center">
-                            <button
-                              onClick={() => v.file.startsWith("http") ? window.open(v.file, "_blank") : alert(`Mengunduh: ${v.file}`)}
-                              className="p-1 text-green-600 hover:bg-green-50 rounded inline-flex"
-                              title="Unduh versi ini"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-              <strong>Catatan:</strong> Pratinjau file (preview) tersedia untuk format PDF dan gambar.
-              Untuk format dokumen lainnya, unduh file terlebih dahulu.
-            </div>
-          </div>
-        )}
+        {viewing && <FileViewer arsip={viewing} sekolahList={sekolahList} />}
       </Modal>
 
       {/* Modal Confirm Delete */}
@@ -554,6 +475,62 @@ export default function ArsipPage() {
           <Button variant="danger" onClick={handleDelete}>Hapus</Button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function FileViewer({ arsip, sekolahList }: { arsip: Arsip; sekolahList: SekolahOption[] }) {
+  const [fileData, setFileData] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/arsip?id=${arsip.id}`)
+      .then(r => r.json())
+      .then(d => { setFileData(d.file); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [arsip.id]);
+
+  const isPdf = fileData?.startsWith("data:application/pdf");
+  const isImage = fileData?.startsWith("data:image/");
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <DetailField label="Jenis Dokumen" value={<Badge variant={jenisDokumenBadge[arsip.jenis_dokumen].variant}>{arsip.jenis_dokumen}</Badge>} />
+        <DetailField label="Sekolah" value={sekolahList.find(s => s.id === arsip.sekolah_id)?.nama || "-"} />
+        <DetailField label="Pemilik" value={arsip.pemilik} />
+        <DetailField label="Nama File" value={arsip.file_name || "-"} />
+        <DetailField label="Tanggal Upload" value={formatDate(arsip.tanggal_upload)} />
+      </div>
+
+      <div className="border-t pt-4">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold text-sm text-gray-800">Pratinjau Dokumen</h4>
+          <a
+            href={`/api/arsip?id=${arsip.id}&download=1`}
+            download={arsip.file_name}
+            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+          >
+            <Download className="w-3 h-3" />
+            Unduh
+          </a>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-gray-400 text-sm">Memuat file...</div>
+        ) : fileData && isPdf ? (
+          <iframe src={fileData} className="w-full h-[70vh] border rounded-lg" title="PDF Preview" />
+        ) : fileData && isImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={fileData} alt={arsip.file_name} className="max-w-full max-h-[70vh] object-contain mx-auto border rounded-lg" />
+        ) : (
+          <div className="text-center py-12 text-gray-400 text-sm">
+            Pratinjau tidak tersedia untuk format ini.
+            <br />
+            <a href={`/api/arsip?id=${arsip.id}&download=1`} className="text-blue-600 underline mt-1 inline-block">Unduh file</a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

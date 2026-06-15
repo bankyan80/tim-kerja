@@ -6,11 +6,40 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const jenis = searchParams.get("jenis_dokumen");
     const sekolah_id = searchParams.get("sekolah_id");
-    let sql = "SELECT a.*, s.nama as sekolah_nama FROM arsip a LEFT JOIN sekolah s ON s.id = a.sekolah_id WHERE a.deleted_at IS NULL";
+    const id = searchParams.get("id");
+    const limit = searchParams.get("limit");
+    const offset = searchParams.get("offset");
+
+    if (id) {
+      const rows = await queryAll("SELECT * FROM arsip WHERE id = ? AND deleted_at IS NULL", [id]);
+      if (rows.length === 0) return NextResponse.json({ error: "not found" }, { status: 404 });
+      const arsip = rows[0];
+      const download = searchParams.get("download");
+      const fileStr = arsip.file as string;
+      if (download === "1" && fileStr) {
+        const mime = fileStr.startsWith("data:application/pdf") ? "application/pdf"
+          : fileStr.startsWith("data:image/png") ? "image/png"
+          : fileStr.startsWith("data:image/jpeg") ? "image/jpeg"
+          : "application/octet-stream";
+        const base64 = fileStr.split(",")[1];
+        const buf = Buffer.from(base64, "base64");
+        return new NextResponse(buf, {
+          headers: {
+            "Content-Type": mime,
+            "Content-Disposition": `attachment; filename="${(arsip.file_name as string) || "dokumen"}"`,
+          },
+        });
+      }
+      return NextResponse.json(arsip);
+    }
+
+    let sql = "SELECT a.id, a.jenis_dokumen, a.sekolah_id, a.bulan, a.tahun, a.pemilik, a.versi, a.created_at as tanggal_upload, a.file_name, s.nama as sekolah_nama FROM arsip a LEFT JOIN sekolah s ON s.id = a.sekolah_id WHERE a.deleted_at IS NULL";
     const args: any[] = [];
     if (jenis) { sql += " AND a.jenis_dokumen = ?"; args.push(jenis); }
     if (sekolah_id) { sql += " AND a.sekolah_id = ?"; args.push(sekolah_id); }
     sql += " ORDER BY a.created_at DESC";
+    if (limit) { sql += " LIMIT ?"; args.push(Number(limit)); }
+    if (offset) { sql += " OFFSET ?"; args.push(Number(offset)); }
     const rows = await queryAll(sql, args);
     return NextResponse.json(rows);
   } catch { return NextResponse.json([], { status: 200 }); }
