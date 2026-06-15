@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { getClient } from "./db";
+import { UserRole } from "./types";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -44,7 +45,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
           if (result.rows.length) {
             session.user.id = result.rows[0].id as string;
-            session.user.role = result.rows[0].role as string;
+            session.user.role = result.rows[0].role as UserRole;
           }
         } catch (e) {
           console.error("Session DB error:", e);

@@ -29,7 +29,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
-import type { User as UserType, UserRole } from "@/lib/types";
+import type { AppUser as UserType, UserRole } from "@/lib/types";
 
 const tabs = [
   { id: "profil", label: "Profil", icon: User },

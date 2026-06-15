@@ -3,9 +3,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'id.go.cirebon.timkerja.bidangsd',
   appName: 'Sistem Kerja Bidang SD',
-  webDir: '.next',
+  webDir: 'out',
   server: {
-    url: process.env.CAP_SERVER_URL || 'http://localhost:3000',
+    url: process.env.CAP_SERVER_URL || 'https://tim-kerja.vercel.app',
     cleartext: true,
   },
   android: {

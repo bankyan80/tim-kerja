@@ -1,6 +1,6 @@
 export type UserRole = "ketua" | "admin" | "staf";
 
-export type User = {
+export type AppUser = {
   id: string;
   email: string;
   name: string;
