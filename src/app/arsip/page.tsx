@@ -19,6 +19,7 @@ import { Input, Select } from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GoogleDrivePicker } from "@/components/ui/GoogleDrivePicker";
 import { formatDate, getBulanName } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -454,13 +455,10 @@ export default function ArsipPage() {
               }}
             />
             <div className="text-xs text-gray-400 text-center">- atau -</div>
-            <Input
-              label="Link Google Drive"
-              id="drive_link"
-              value={driveLink}
-              onChange={(e) => { setDriveLink(e.target.value); if (e.target.value) updateForm("file", e.target.value); }}
-              placeholder="https://drive.google.com/file/d/..."
-            />
+            <GoogleDrivePicker onSelect={(file) => { setDriveLink(file.url); updateForm("file", file.url); }} />
+            {driveLink && (
+              <a href={driveLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline truncate block">{driveLink}</a>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
