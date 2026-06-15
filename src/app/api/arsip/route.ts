@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const b = await req.json();
-    const { jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, versi } = b;
-    await execute(`INSERT INTO arsip (jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, versi) VALUES (?,?,?,?,?,?,?)`, [jenis_dokumen, sekolah_id||null, bulan||null, tahun, pemilik, file||'', versi||1]);
+    const { jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, versi, file_name } = b;
+    await execute(`INSERT INTO arsip (jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, versi, file_name) VALUES (?,?,?,?,?,?,?,?)`, [jenis_dokumen, sekolah_id||null, bulan||null, tahun, pemilik, file||'', versi||1, file_name||'']);
     return NextResponse.json({ ok: true });
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
 }

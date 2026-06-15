@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS arsip (
   tahun TEXT NOT NULL,
   pemilik TEXT NOT NULL DEFAULT '',
   file TEXT NOT NULL,
+  file_name TEXT NOT NULL DEFAULT '',
   versi INTEGER DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),

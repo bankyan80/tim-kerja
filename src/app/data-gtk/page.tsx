@@ -14,6 +14,8 @@ import {
   Clock,
   AlertTriangle,
   Users,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/Table";
@@ -132,10 +134,37 @@ export default function DataGTKPage() {
   const [filterJabatan, setFilterJabatan] = useState("");
   const [filterStatusAktif, setFilterStatusAktif] = useState("");
 
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadSekolah, setUploadSekolah] = useState("");
+  const [uploadPemilik, setUploadPemilik] = useState("");
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [gtkOptions, setGtkOptions] = useState<GTK[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dokumenList, setDokumenList] = useState<any[]>([]);
+
   useEffect(() => {
     fetch("/api/gtk").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (uploadSekolah) {
+      fetch(`/api/gtk?sekolah_id=${uploadSekolah}`).then(r => r.json()).then(setGtkOptions).catch(() => setGtkOptions([]));
+    } else {
+      setGtkOptions([]);
+    }
+    setUploadPemilik("");
+  }, [uploadSekolah]);
+
+  useEffect(() => {
+    if (viewing) {
+      fetch(`/api/arsip?jenis_dokumen=Dokumen%20GTK`).then(r => r.json()).then(d => {
+        setDokumenList(d.filter((a: any) => a.pemilik === viewing.nama));
+      }).catch(() => setDokumenList([]));
+    } else {
+      setDokumenList([]);
+    }
+  }, [viewing]);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -304,6 +333,41 @@ export default function DataGTKPage() {
     setModalOpen(false);
   }
 
+  async function handleUploadDokumen() {
+    if (!uploadPemilik || uploadFiles.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of uploadFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+        if (!uploadRes.ok) continue;
+        const { url, name } = await uploadRes.json();
+        await fetch("/api/arsip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jenis_dokumen: "Dokumen GTK",
+            sekolah_id: uploadSekolah || null,
+            pemilik: uploadPemilik,
+            file: url,
+            file_name: name,
+            bulan: new Date().getMonth() + 1,
+            tahun: new Date().getFullYear(),
+            versi: 1,
+          }),
+        });
+      }
+      toast.success(`${uploadFiles.length} dokumen berhasil diupload`);
+      setUploadModalOpen(false);
+      setUploadFiles([]);
+      setUploadPemilik("");
+    } catch {
+      toast.error("Gagal mengupload dokumen");
+    }
+    setUploading(false);
+  }
+
   function updateForm(key: keyof GTK, value: string | number | boolean) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -326,10 +390,16 @@ export default function DataGTKPage() {
               <p className="text-sm text-gray-500 mt-0.5">Kecamatan Lemahabang</p>
             </div>
           </div>
-          <Button onClick={openAddModal}>
-            <Plus className="w-4 h-4 mr-2" />
-            Tambah GTK
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setUploadModalOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Dokumen
+            </Button>
+            <Button onClick={openAddModal}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah GTK
+            </Button>
+          </div>
         </div>
 
         {/* Filter */}
@@ -575,6 +645,51 @@ export default function DataGTKPage() {
         </div>
       </Modal>
 
+      {/* Modal Upload Dokumen */}
+      <Modal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        title="Upload Dokumen GTK"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Select
+            label="Sekolah"
+            id="upload_sekolah"
+            value={uploadSekolah}
+            onChange={(e) => setUploadSekolah(e.target.value)}
+            options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
+          />
+          {uploadSekolah && (
+            <Select
+              label="Pemilik (GTK)"
+              id="upload_pemilik"
+              value={uploadPemilik}
+              onChange={(e) => setUploadPemilik(e.target.value)}
+              options={gtkOptions.map((g) => ({ value: g.nama, label: `${g.nama} - ${g.jabatan}` }))}
+            />
+          )}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">File Dokumen</label>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {uploadFiles.length > 0 && (
+              <p className="text-xs text-gray-500">{uploadFiles.length} file dipilih</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setUploadModalOpen(false)}>Batal</Button>
+            <Button onClick={handleUploadDokumen} disabled={uploading || !uploadPemilik || uploadFiles.length === 0}>
+              {uploading ? "Mengupload..." : "Upload"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Modal Lihat Detail */}
       <Modal
         open={!!viewing}
@@ -610,6 +725,36 @@ export default function DataGTKPage() {
                 value={<Badge variant={viewing.status_aktif === "aktif" ? "success" : "danger"}>{viewing.status_aktif === "aktif" ? "Aktif" : "Nonaktif"}</Badge>}
               />
             </div>
+            {dokumenList.length > 0 && (
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold text-sm text-gray-800 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  Dokumen ({dokumenList.length})
+                </h4>
+                <div className="space-y-2">
+                  {dokumenList.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span className="text-sm text-gray-700 truncate">{doc.file_name || "Dokumen"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs text-gray-400">{doc.file_size}</span>
+                        <a
+                          href={doc.file}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Unduh"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

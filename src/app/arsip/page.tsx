@@ -19,7 +19,6 @@ import { Input, Select } from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GoogleDrivePicker } from "@/components/ui/GoogleDrivePicker";
 import { formatDate, getBulanName } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -138,7 +137,6 @@ export default function ArsipPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Arsip>(defaultForm);
   const [viewing, setViewing] = useState<Arsip | null>(null);
-  const [driveLink, setDriveLink] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterJenisDokumen, setFilterJenisDokumen] = useState("");
@@ -243,7 +241,6 @@ export default function ArsipPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setDriveLink("");
     setForm({
       ...defaultForm,
       tanggal_upload: new Date().toISOString().split("T")[0],
@@ -256,7 +253,6 @@ export default function ArsipPage() {
   function handleEdit(arsip: Arsip) {
     setEditingId(arsip.id);
     setForm({ ...arsip });
-    setDriveLink(arsip.file.startsWith("http") ? arsip.file : "");
     setModalOpen(true);
   }
 
@@ -282,15 +278,14 @@ export default function ArsipPage() {
 
   async function handleSave() {
     try {
-      const fileValue = driveLink || form.file;
-      const payload = (({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, catatan }) => ({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file: fileValue, file_size: driveLink ? "" : form.file_size, versi: editingId ? form.versi : 1, catatan: catatan || "" }))(form);
+      const payload = (({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, file_size, versi, catatan }) => ({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, file_size, versi: editingId ? form.versi : 1, catatan: catatan || "" }))(form);
       if (editingId) {
         const res = await fetch("/api/arsip", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (res.ok) { setData((prev) => prev.map((a) => (a.id === editingId ? { ...form, id: editingId, file: fileValue, file_size: driveLink ? "" : form.file_size } : a))); toast.success("Arsip berhasil diperbarui"); }
+        if (res.ok) { setData((prev) => prev.map((a) => (a.id === editingId ? { ...form, id: editingId } : a))); toast.success("Arsip berhasil diperbarui"); }
       } else {
         const res = await fetch("/api/arsip", {
           method: "POST",
@@ -450,15 +445,9 @@ export default function ArsipPage() {
                 if (file) {
                   updateForm("file", file.name);
                   updateForm("file_size", `${(file.size / (1024 * 1024)).toFixed(1)} MB`);
-                  setDriveLink("");
                 }
               }}
             />
-            <div className="text-xs text-gray-400 text-center">- atau -</div>
-            <GoogleDrivePicker onSelect={(file) => { setDriveLink(file.url); updateForm("file", file.url); }} />
-            {driveLink && (
-              <a href={driveLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline truncate block">{driveLink}</a>
-            )}
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Batal</Button>
