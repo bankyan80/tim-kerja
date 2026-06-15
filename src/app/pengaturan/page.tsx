@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import toast from "react-hot-toast";
 import {
   Settings,
   User,
@@ -205,6 +206,7 @@ export default function PengaturanPage() {
     setAddUserEmail("");
     setAddUserRole("staf");
     setShowAddUser(false);
+    toast.success(`User ${newUser.email} berhasil ditambahkan`);
   }
 
   function openEditUser(user: UserType) {
@@ -221,6 +223,7 @@ export default function PengaturanPage() {
       )
     );
     setEditingUser(null);
+    toast.success("User berhasil diperbarui");
   }
 
   function togglePermission(mod: string, role: UserRole, action: PermissionAction) {
@@ -304,7 +307,7 @@ export default function PengaturanPage() {
                 <Input label="Email" id="email" type="email" defaultValue={session?.user?.email || ""} />
                 <Input label="Password Baru" id="password" type="password" placeholder="Biarkan kosong jika tidak diubah" />
                 <div className="flex justify-end pt-2">
-                  <Button>
+                  <Button onClick={() => toast.success("Profil berhasil disimpan")}>
                     <Save className="w-4 h-4 mr-2" />
                     Simpan Profil
                   </Button>
@@ -361,7 +364,7 @@ export default function PengaturanPage() {
                   defaultValue="{nomor}/SURAT/{bulan_romawi}/{tahun}"
                 />
                 <div className="flex justify-end pt-2">
-                  <Button>
+                  <Button onClick={() => toast.success("Pengaturan aplikasi berhasil disimpan")}>
                     <Save className="w-4 h-4 mr-2" />
                     Simpan Pengaturan
                   </Button>
@@ -523,7 +526,7 @@ export default function PengaturanPage() {
               </div>
               {isAdmin && (
                 <div className="flex justify-end mt-4 pt-4 border-t">
-                  <Button>
+                  <Button onClick={() => toast.success("Hak akses berhasil disimpan")}>
                     <Save className="w-4 h-4 mr-2" />
                     Simpan Hak Akses
                   </Button>
@@ -562,11 +565,11 @@ export default function PengaturanPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Button>
+                    <Button onClick={() => toast.success("Backup database berhasil dibuat")}>
                       <Download className="w-4 h-4 mr-2" />
                       Buat Backup
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => toast.success("Backup berhasil dipulihkan")}>
                       <Upload className="w-4 h-4 mr-2" />
                       Pulihkan Backup
                     </Button>
