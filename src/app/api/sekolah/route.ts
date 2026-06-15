@@ -5,10 +5,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
-    let sql = "SELECT * FROM sekolah WHERE deleted_at IS NULL";
+    let sql = `SELECT s.*, 
+      COALESCE(NULLIF(s.kepala_sekolah, ''), (SELECT g.nama FROM gtk g WHERE g.sekolah_id = s.id AND g.jenis_gtk = 'Kepala Sekolah' LIMIT 1)) as kepala_sekolah,
+      COALESCE(NULLIF(s.nip_kepala_sekolah, ''), (SELECT g.nip FROM gtk g WHERE g.sekolah_id = s.id AND g.jenis_gtk = 'Kepala Sekolah' LIMIT 1)) as nip_kepala_sekolah
+      FROM sekolah s WHERE s.deleted_at IS NULL`;
     const args: any[] = [];
-    if (status) { sql += " AND status_aktif = ?"; args.push(status); }
-    sql += " ORDER BY nama";
+    if (status) { sql += " AND s.status_aktif = ?"; args.push(status); }
+    sql += " ORDER BY s.nama";
     const rows = await queryAll(sql, args);
     return NextResponse.json(rows);
   } catch { return NextResponse.json([], { status: 200 }); }
