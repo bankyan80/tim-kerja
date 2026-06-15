@@ -163,6 +163,8 @@ export default function ArsipPage() {
   const [viewing, setViewing] = useState<Arsip | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [gtkPegawai, setGtkPegawai] = useState<string[]>([]);
+  const [loadingPegawai, setLoadingPegawai] = useState(false);
   const [filterJenisDokumen, setFilterJenisDokumen] = useState("");
   const [filterSekolah, setFilterSekolah] = useState("");
   const [filterTahun, setFilterTahun] = useState("");
@@ -254,6 +256,16 @@ export default function ArsipPage() {
     }
     setModalOpen(false);
   }
+
+  useEffect(() => {
+    if (!form.sekolah_id) { setGtkPegawai([]); return; }
+    setLoadingPegawai(true);
+    setGtkPegawai([]);
+    fetch(`/api/gtk?sekolah_id=${form.sekolah_id}`)
+      .then(r => r.json())
+      .then(d => { setGtkPegawai(d.map((g: any) => g.nama).filter((n: string) => n.trim())); setLoadingPegawai(false); })
+      .catch(() => setLoadingPegawai(false));
+  }, [form.sekolah_id]);
 
   function updateForm(key: keyof Arsip, value: string | number) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -449,11 +461,14 @@ export default function ArsipPage() {
               onChange={(e) => updateForm("tahun", Number(e.target.value))}
               options={tahunOptions}
             />
-            <Input
+            <Select
               label="Pemilik"
               id="pemilik"
               value={form.pemilik}
               onChange={(e) => updateForm("pemilik", e.target.value)}
+              options={gtkPegawai.map((n) => ({ value: n, label: n }))}
+              disabled={!form.sekolah_id || loadingPegawai}
+              placeholder={loadingPegawai ? "Memuat..." : (!form.sekolah_id ? "Pilih sekolah terlebih dahulu" : "Pilih pegawai")}
             />
             <Input
               label="Upload File"
