@@ -7,6 +7,7 @@ export type AppUser = {
   avatar?: string;
   role: UserRole;
   status: "aktif" | "nonaktif";
+  sekolah_id?: string;
   created_at: string;
 };
 

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryAll, execute } from "@/lib/db";
+import { getSekolahFilter } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const sekolah_id = searchParams.get("sekolah_id");
+    const { forcedSekolah } = await getSekolahFilter();
+    const sekolah_id = forcedSekolah || searchParams.get("sekolah_id");
     const jenis = searchParams.get("jenis_gtk");
     let sql = "SELECT g.*, s.nama as sekolah_nama FROM gtk g LEFT JOIN sekolah s ON s.id = g.sekolah_id WHERE g.deleted_at IS NULL";
     const args: any[] = [];

@@ -101,6 +101,8 @@ const statusBadge: Record<StatusSiswa, { variant: "success" | "warning" | "info"
 
 export default function DataSiswaPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<Siswa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,9 +119,12 @@ export default function DataSiswaPage() {
   const [filterStatusSiswa, setFilterStatusSiswa] = useState("");
 
   useEffect(() => {
-    fetch("/api/siswa").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/siswa${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -220,7 +225,7 @@ export default function DataSiswaPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
     setModalOpen(true);
   }
 
@@ -309,6 +314,7 @@ export default function DataSiswaPage() {
                 className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -319,6 +325,7 @@ export default function DataSiswaPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterKelas}
               onChange={(e) => setFilterKelas(e.target.value)}
@@ -485,6 +492,9 @@ export default function DataSiswaPage() {
             options={kelasOptions.map((k) => ({ value: k, label: `Kelas ${k}` }))}
           />
           <Input label="Rombel" id="rombel" value={form.rombel} onChange={(e) => updateForm("rombel", e.target.value)} />
+          {isOperator ? (
+            <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+          ) : (
           <Select
             label="Sekolah"
             id="sekolah_id"
@@ -492,6 +502,7 @@ export default function DataSiswaPage() {
             onChange={(e) => updateForm("sekolah_id", e.target.value)}
             options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
           />
+          )}
           <Input label="Tahun Pelajaran" id="tahun_pelajaran" value={form.tahun_pelajaran} onChange={(e) => updateForm("tahun_pelajaran", e.target.value)} />
           <Select
             label="Status Siswa"

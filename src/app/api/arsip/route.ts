@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryAll, execute } from "@/lib/db";
+import { getSekolahFilter } from "@/lib/auth-utils";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const { forcedSekolah } = await getSekolahFilter();
     const jenis = searchParams.get("jenis_dokumen");
-    const sekolah_id = searchParams.get("sekolah_id");
+    const sekolah_id = forcedSekolah || searchParams.get("sekolah_id");
     const id = searchParams.get("id");
     const limit = searchParams.get("limit");
     const offset = searchParams.get("offset");

@@ -31,7 +31,7 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
-import type { AppUser as UserType, UserRole } from "@/lib/types";
+import type { AppUser as UserType, UserRole, Sekolah } from "@/lib/types";
 
 const tabs = [
   { id: "profil", label: "Profil", icon: User },
@@ -168,14 +168,17 @@ export default function PengaturanPage() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [permissions, setPermissions] = useState<PermissionMap>(initialPermissions);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [sekolahList, setSekolahList] = useState<Sekolah[]>([]);
 
   const [showAddUser, setShowAddUser] = useState(false);
   const [addUserEmail, setAddUserEmail] = useState("");
   const [addUserRole, setAddUserRole] = useState<UserRole>("staf");
+  const [addUserSekolah, setAddUserSekolah] = useState("");
 
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [editUserRole, setEditUserRole] = useState<UserRole>("staf");
   const [editUserStatus, setEditUserStatus] = useState<"aktif" | "nonaktif">("aktif");
+  const [editUserSekolah, setEditUserSekolah] = useState("");
 
   const fotoInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -208,14 +211,17 @@ export default function PengaturanPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [usersRes, settingsRes, profileRes] = await Promise.all([
+        const [usersRes, settingsRes, profileRes, sekolahRes] = await Promise.all([
           fetch("/api/pengaturan"),
           fetch("/api/pengaturan/settings"),
           fetch("/api/pengaturan/profile"),
+          fetch("/api/sekolah"),
         ]);
         const usersData = await usersRes.json();
         const settingsData = await settingsRes.json();
+        const sekolahData = await sekolahRes.json();
         if (Array.isArray(usersData)) setUsers(usersData);
+        if (Array.isArray(sekolahData)) setSekolahList(sekolahData);
         if (settingsData && !settingsData.error) setSettings(settingsData);
         const profileData = await profileRes.json();
         if (profileData?.foto) setFotoPreview(profileData.foto);
@@ -235,20 +241,23 @@ export default function PengaturanPage() {
     const res = await fetch("/api/pengaturan", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "add_user", email: addUserEmail.trim(), role: addUserRole }),
+      body: JSON.stringify({ action: "add_user", email: addUserEmail.trim(), role: addUserRole, sekolah_id: addUserSekolah || null }),
     });
     if (!res.ok) { toast.error("Gagal menambahkan user"); return; }
+    const sekolahNama = sekolahList.find((s) => s.id === addUserSekolah)?.nama;
     const newUser: UserType = {
       id: String(Date.now()),
       email: addUserEmail.trim(),
       name: addUserEmail.split("@")[0],
       role: addUserRole,
       status: "aktif",
+      sekolah_id: addUserSekolah || undefined,
       created_at: new Date().toISOString().split("T")[0],
     };
     setUsers((prev) => [...prev, newUser]);
     setAddUserEmail("");
     setAddUserRole("staf");
+    setAddUserSekolah("");
     setShowAddUser(false);
     toast.success(`User ${newUser.email} berhasil ditambahkan`);
   }
@@ -257,6 +266,7 @@ export default function PengaturanPage() {
     setEditingUser(user);
     setEditUserRole(user.role);
     setEditUserStatus(user.status);
+    setEditUserSekolah(user.sekolah_id || "");
   }
 
   async function handleEditUser() {
@@ -264,11 +274,11 @@ export default function PengaturanPage() {
     await fetch("/api/pengaturan", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update_user", id: editingUser.id, role: editUserRole, status: editUserStatus }),
+      body: JSON.stringify({ action: "update_user", id: editingUser.id, role: editUserRole, status: editUserStatus, sekolah_id: editUserSekolah || null }),
     });
     setUsers((prev) =>
       prev.map((u) =>
-        u.id === editingUser.id ? { ...u, role: editUserRole, status: editUserStatus } : u
+        u.id === editingUser.id ? { ...u, role: editUserRole, status: editUserStatus, sekolah_id: editUserSekolah || undefined } : u
       )
     );
     setEditingUser(null);
@@ -482,6 +492,7 @@ export default function PengaturanPage() {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nama</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Sekolah</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Aksi</th>
                       </tr>
@@ -496,6 +507,9 @@ export default function PengaturanPage() {
                             <Badge variant={user.role === "ketua" ? "danger" : user.role === "admin" ? "info" : user.role === "operator_sekolah" ? "warning" : "default"}>
                               {roleLabels[user.role]}
                             </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600 max-w-[200px] truncate">
+                            {user.sekolah_id ? (sekolahList.find((s) => s.id === user.sekolah_id)?.nama || "-") : "-"}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
@@ -735,9 +749,18 @@ export default function PengaturanPage() {
             label="Role"
             id="role_add"
             value={addUserRole}
-            onChange={(e) => setAddUserRole(e.target.value as UserRole)}
+            onChange={(e) => { setAddUserRole(e.target.value as UserRole); if (e.target.value !== "operator_sekolah") setAddUserSekolah(""); }}
             options={roleOptions}
           />
+          {addUserRole === "operator_sekolah" && (
+            <Select
+              label="Sekolah"
+              id="sekolah_add"
+              value={addUserSekolah}
+              onChange={(e) => setAddUserSekolah(e.target.value)}
+              options={[{ value: "", label: "Pilih sekolah..." }, ...sekolahList.map((s) => ({ value: s.id, label: s.nama }))]}
+            />
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowAddUser(false)}>Batal</Button>
             <Button onClick={handleAddUser}>Tambah</Button>
@@ -757,9 +780,18 @@ export default function PengaturanPage() {
               label="Role"
               id="role_edit"
               value={editUserRole}
-              onChange={(e) => setEditUserRole(e.target.value as UserRole)}
+              onChange={(e) => { setEditUserRole(e.target.value as UserRole); if (e.target.value !== "operator_sekolah") setEditUserSekolah(""); }}
               options={roleOptions}
             />
+            {editUserRole === "operator_sekolah" && (
+              <Select
+                label="Sekolah"
+                id="sekolah_edit"
+                value={editUserSekolah}
+                onChange={(e) => setEditUserSekolah(e.target.value)}
+                options={[{ value: "", label: "Pilih sekolah..." }, ...sekolahList.map((s) => ({ value: s.id, label: s.nama }))]}
+              />
+            )}
             <Select
               label="Status"
               id="status_edit"

@@ -117,13 +117,18 @@ const defaultForm: Monitoring = {
 
 export default function MonitoringPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<Monitoring[]>([]);
   const [loading, setLoading] = useState(true);
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   useEffect(() => {
-    fetch("/api/monitoring")
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/monitoring${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
         setData(d);
@@ -131,7 +136,7 @@ export default function MonitoringPage() {
       })
       .catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Monitoring>(defaultForm);
@@ -218,7 +223,7 @@ export default function MonitoringPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
     setModalOpen(true);
   }
 
@@ -334,6 +339,7 @@ export default function MonitoringPage() {
         <Card>
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-gray-500">Filter:</span>
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -344,6 +350,7 @@ export default function MonitoringPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterJenis}
               onChange={(e) => setFilterJenis(e.target.value)}
@@ -395,6 +402,9 @@ export default function MonitoringPage() {
         size="xl"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isOperator ? (
+            <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+          ) : (
           <Select
             label="Sekolah"
             id="sekolah_id"
@@ -402,6 +412,7 @@ export default function MonitoringPage() {
             onChange={(e) => updateForm("sekolah_id", e.target.value)}
             options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
           />
+          )}
           <Input
             label="Tanggal"
             id="tanggal"

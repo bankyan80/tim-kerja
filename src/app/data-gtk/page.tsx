@@ -119,6 +119,8 @@ const defaultForm: GTK = {
 
 export default function DataGTKPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<GTK[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,9 +145,12 @@ export default function DataGTKPage() {
   const [dokumenList, setDokumenList] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/gtk").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/gtk${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url).then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
 
   useEffect(() => {
     if (uploadSekolah) {
@@ -297,7 +302,7 @@ export default function DataGTKPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
     setModalOpen(true);
   }
 
@@ -391,7 +396,10 @@ export default function DataGTKPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setUploadModalOpen(true)}>
+            <Button variant="outline" onClick={() => {
+              if (isOperator && userSekolahId) setUploadSekolah(userSekolahId);
+              setUploadModalOpen(true);
+            }}>
               <Upload className="w-4 h-4 mr-2" />
               Upload Dokumen
             </Button>
@@ -414,6 +422,7 @@ export default function DataGTKPage() {
                 className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -424,6 +433,7 @@ export default function DataGTKPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterStatusPegawai}
               onChange={(e) => setFilterStatusPegawai(e.target.value)}
@@ -595,6 +605,9 @@ export default function DataGTKPage() {
             onChange={(e) => updateForm("jenis_gtk", e.target.value)}
             options={jenisGtkOptions.map((j) => ({ value: j, label: j }))}
           />
+          {isOperator ? (
+            <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+          ) : (
           <Select
             label="Sekolah"
             id="sekolah_id"
@@ -602,6 +615,7 @@ export default function DataGTKPage() {
             onChange={(e) => updateForm("sekolah_id", e.target.value)}
             options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
           />
+          )}
           <Input label="Pangkat/Golongan" id="pangkat_golongan" value={form.pangkat_golongan} onChange={(e) => updateForm("pangkat_golongan", e.target.value)} />
           <Select
             label="Pendidikan Terakhir"
@@ -653,6 +667,7 @@ export default function DataGTKPage() {
         size="lg"
       >
         <div className="space-y-4">
+          {!isOperator && (
           <Select
             label="Sekolah"
             id="upload_sekolah"
@@ -660,6 +675,7 @@ export default function DataGTKPage() {
             onChange={(e) => setUploadSekolah(e.target.value)}
             options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
           />
+          )}
           {uploadSekolah && (
             <Select
               label="Pemilik (GTK)"

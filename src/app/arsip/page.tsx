@@ -141,13 +141,18 @@ const defaultForm: Arsip = {
 
 export default function ArsipPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<Arsip[]>([]);
   const [loading, setLoading] = useState(true);
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   function fetchList() {
-    fetch("/api/arsip")
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/arsip${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
@@ -156,7 +161,7 @@ export default function ArsipPage() {
   useEffect(() => {
     fetchList();
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Arsip>(defaultForm);
@@ -203,6 +208,7 @@ export default function ArsipPage() {
     setEditingId(null);
     setForm({
       ...defaultForm,
+      sekolah_id: isOperator && userSekolahId ? userSekolahId : "",
       tanggal_upload: new Date().toISOString().split("T")[0],
       bulan: new Date().getMonth() + 1,
       tahun: new Date().getFullYear(),
@@ -317,6 +323,7 @@ export default function ArsipPage() {
                 <option key={j} value={j}>{j}</option>
               ))}
             </select>
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -327,6 +334,7 @@ export default function ArsipPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterTahun}
               onChange={(e) => setFilterTahun(e.target.value)}
@@ -440,6 +448,9 @@ export default function ArsipPage() {
               onChange={(e) => updateForm("jenis_dokumen", e.target.value)}
               options={jenisDokumenList.map((j) => ({ value: j, label: j }))}
             />
+            {isOperator ? (
+              <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+            ) : (
             <Select
               label="Sekolah"
               id="sekolah_id"
@@ -447,6 +458,7 @@ export default function ArsipPage() {
               onChange={(e) => updateForm("sekolah_id", e.target.value)}
               options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
             />
+            )}
             <Select
               label="Bulan"
               id="bulan"

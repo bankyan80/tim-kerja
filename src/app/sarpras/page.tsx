@@ -81,13 +81,18 @@ const defaultForm: Sarpras = {
 
 export default function SarprasPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<Sarpras[]>([]);
   const [loading, setLoading] = useState(true);
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   useEffect(() => {
-    fetch("/api/sarpras")
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/sarpras${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
         setData(d);
@@ -95,7 +100,7 @@ export default function SarprasPage() {
       })
       .catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Sarpras>(defaultForm);
@@ -176,7 +181,7 @@ export default function SarprasPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
     setModalOpen(true);
   }
 
@@ -283,6 +288,7 @@ export default function SarprasPage() {
         <Card>
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-gray-500">Filter:</span>
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -293,6 +299,7 @@ export default function SarprasPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterJenis}
               onChange={(e) => setFilterJenis(e.target.value)}
@@ -334,6 +341,9 @@ export default function SarprasPage() {
         size="lg"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isOperator ? (
+            <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+          ) : (
           <Select
             label="Sekolah"
             id="sekolah_id"
@@ -341,6 +351,7 @@ export default function SarprasPage() {
             onChange={(e) => updateForm("sekolah_id", e.target.value)}
             options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
           />
+          )}
           <Select
             label="Jenis"
             id="jenis"

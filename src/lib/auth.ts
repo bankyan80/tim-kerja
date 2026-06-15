@@ -36,12 +36,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (db) {
         try {
           const result = await db.execute({
-            sql: "SELECT id, name, email, role, avatar FROM users WHERE email = ?",
+            sql: "SELECT id, name, email, role, avatar, sekolah_id FROM users WHERE email = ?",
             args: [session.user!.email!],
           });
           if (result.rows.length) {
             session.user.id = result.rows[0].id as string;
             session.user.role = result.rows[0].role as UserRole;
+            session.user.sekolah_id = (result.rows[0].sekolah_id as string) || undefined;
           }
         } catch (e) {
           console.error("Session DB error:", e);

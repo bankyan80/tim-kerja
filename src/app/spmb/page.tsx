@@ -60,13 +60,18 @@ const defaultForm: SPMB = {
 
 export default function SPMBPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<SPMB[]>([]);
   const [loading, setLoading] = useState(true);
   const [sekolahList, setSekolahList] = useState<{ id: string; nama: string }[]>([]);
 
   useEffect(() => {
-    fetch("/api/spmb")
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/spmb${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
         setData(d);
@@ -74,7 +79,7 @@ export default function SPMBPage() {
       })
       .catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<SPMB>(defaultForm);
@@ -148,7 +153,7 @@ export default function SPMBPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setForm(defaultForm);
+    setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
     setModalOpen(true);
   }
 
@@ -236,6 +241,7 @@ export default function SPMBPage() {
         <Card>
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-gray-500">Filter:</span>
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -246,6 +252,7 @@ export default function SPMBPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterTahun}
               onChange={(e) => setFilterTahun(e.target.value)}
@@ -287,6 +294,9 @@ export default function SPMBPage() {
         size="lg"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isOperator ? (
+            <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+          ) : (
           <Select
             label="Sekolah"
             id="sekolah_id"
@@ -294,6 +304,7 @@ export default function SPMBPage() {
             onChange={(e) => updateForm("sekolah_id", e.target.value)}
             options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
           />
+          )}
           <Select
             label="Tahun Pelajaran"
             id="tahun_pelajaran"

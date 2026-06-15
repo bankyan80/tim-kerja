@@ -155,13 +155,18 @@ const defaultForm: LaporanBulanan = {
 
 export default function LaporanBulananPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<LaporanBulanan[]>([]);
   const [loading, setLoading] = useState(true);
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   useEffect(() => {
-    fetch("/api/laporan")
+    const params = new URLSearchParams();
+    if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    const url = `/api/laporan${params.toString() ? "?" + params.toString() : ""}`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
         setData(d);
@@ -169,7 +174,7 @@ export default function LaporanBulananPage() {
       })
       .catch(() => setLoading(false));
     fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama, npsn: s.npsn || "", alamat: s.alamat || "", kepala_sekolah: s.kepala_sekolah || "" })))).catch(() => {});
-  }, []);
+  }, [isOperator, userSekolahId]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LaporanBulanan>(defaultForm);
@@ -301,7 +306,7 @@ export default function LaporanBulananPage() {
 
   function openAddModal() {
     setEditingId(null);
-    setForm({ ...defaultForm, tanggal_dibuat: new Date().toISOString().split("T")[0] });
+    setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "", tanggal_dibuat: new Date().toISOString().split("T")[0] });
     setModalOpen(true);
   }
 
@@ -423,6 +428,7 @@ export default function LaporanBulananPage() {
         {/* Filter */}
         <Card>
           <div className="flex flex-wrap items-center gap-4">
+            {!isOperator && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -438,6 +444,8 @@ export default function LaporanBulananPage() {
                 className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            )}
+            {!isOperator && (
             <select
               value={filterSekolah}
               onChange={(e) => setFilterSekolah(e.target.value)}
@@ -448,6 +456,7 @@ export default function LaporanBulananPage() {
                 <option key={s.id} value={s.id}>{s.nama}</option>
               ))}
             </select>
+            )}
             <select
               value={filterBulan}
               onChange={(e) => setFilterBulan(e.target.value)}
@@ -557,6 +566,9 @@ export default function LaporanBulananPage() {
         <div className="space-y-6">
           {/* Identitas Laporan */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {isOperator ? (
+              <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
+            ) : (
             <Select
               label="Sekolah"
               id="sekolah_id"
@@ -564,6 +576,7 @@ export default function LaporanBulananPage() {
               onChange={(e) => updateForm("sekolah_id", e.target.value)}
               options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
             />
+            )}
             <Select
               label="Bulan"
               id="bulan"

@@ -73,6 +73,8 @@ const defaultForm: Sekolah = {
 
 export default function DataSekolahPage() {
   const { data: session } = useSession();
+  const isOperator = session?.user?.role === "operator_sekolah";
+  const userSekolahId = session?.user?.sekolah_id;
 
   const [data, setData] = useState<Sekolah[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,11 +86,19 @@ export default function DataSekolahPage() {
   const [filterAkreditasi, setFilterAkreditasi] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/sekolah").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+    const url = isOperator && userSekolahId ? `/api/sekolah?id=${userSekolahId}` : "/api/sekolah";
+    fetch(url).then(r => r.json()).then(d => {
+      const result = Array.isArray(d) ? d : [d];
+      setData(result);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [isOperator, userSekolahId]);
 
   const filteredData = useMemo(() => {
     let result = data;
+    if (isOperator && userSekolahId) {
+      result = result.filter((s) => s.id === userSekolahId);
+    }
     if (filterStatus) {
       result = result.filter((s) => s.status === filterStatus);
     }
@@ -96,7 +106,7 @@ export default function DataSekolahPage() {
       result = result.filter((s) => s.akreditasi === filterAkreditasi);
     }
     return result;
-  }, [data, filterStatus, filterAkreditasi]);
+  }, [data, filterStatus, filterAkreditasi, isOperator, userSekolahId]);
 
   const columns: ColumnDef<Sekolah>[] = [
     {
@@ -246,10 +256,12 @@ export default function DataSekolahPage() {
               <p className="text-sm text-gray-500 mt-0.5">Kecamatan Lemahabang</p>
             </div>
           </div>
+          {!isOperator && (
           <Button onClick={openAddModal}>
             <Plus className="w-4 h-4 mr-2" />
             Tambah Sekolah
           </Button>
+          )}
         </div>
 
         {/* Filter */}
