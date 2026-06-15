@@ -25,6 +25,15 @@ const MAP_JENIS = {
   "SERTIFIKAT PELATIHAN-DIKLAT PDF (MAKS 2MB)": "Sertifikat Pelatihan",
   "SK KGB PDF (MAKS 1MB)": "SK KGB",
   "SKP-DP3 2021 PDF (MAKS 2MB)": "SKP",
+  "BPJS KESEHATAN (File responses)": "BPJS Kesehatan",
+  "IJAZAH (File responses)": "Ijazah",
+  "KARTU KELUARGA (File responses)": "Kartu Keluarga",
+  "KTP (File responses)": "KTP",
+  "NPWP (File responses)": "NPWP",
+  "PAS FOTO (PDH) (File responses)": "Pass Foto",
+  "SERTIFIKAT PENDIDIK (File responses)": "Sertifikat Pendidik",
+  "SK PENUGASAN (KEPSEK) (File responses)": "SK Penugasan",
+  "SK PPPK PW (File responses)": "SK PPPK PW",
 };
 
 function normalizeName(n) {
@@ -290,65 +299,79 @@ async function matchGtk(nip, name, beforeDash, afterDash) {
   return await fallbackFuzzyMatch(validCandidates);
 }
 
+async function processFolder(folderPath, jenisDokumen, stats) {
+  const files = readdirSync(folderPath).filter(f => {
+    const ext = f.toLowerCase();
+    return ext.endsWith(".pdf") || ext.endsWith(".jpg") || ext.endsWith(".jpeg") || ext.endsWith(".png");
+  });
+  for (const file of files) {
+    const filePath = join(folderPath, file);
+    const { nip, name, beforeDash, afterDash } = extractNipName(file);
+    if (!nip && (!name || name.length < 2)) {
+      console.log(`  SKIP (no identifier): ${file} [${jenisDokumen}]`);
+      continue;
+    }
+    const gtk = await matchGtk(nip, name, beforeDash, afterDash);
+    if (!gtk) {
+      console.log(`  NO MATCH: ${file} (nip=${nip || "-"}, name=${name}) [${jenisDokumen}]`);
+      stats.noMatch++;
+      continue;
+    }
+    const dup = await client.execute(
+      "SELECT id FROM arsip WHERE file_name = ? AND pemilik = ? AND jenis_dokumen = ? AND deleted_at IS NULL LIMIT 1",
+      [file, gtk.nama, jenisDokumen]
+    );
+    if (dup.rows.length > 0) {
+      console.log(`  SKIP (duplicate): ${file} [${jenisDokumen}]`);
+      stats.skipped++;
+      continue;
+    }
+    stats.imported++;
+    const buf = readFileSync(filePath);
+    const base64 = buf.toString("base64");
+    const mime = extname(file).toLowerCase() === ".pdf" ? "application/pdf"
+      : extname(file).toLowerCase() === ".png" ? "image/png"
+      : "image/jpeg";
+    const dataUrl = `data:${mime};base64,${base64}`;
+    const now = new Date();
+    await client.execute(
+      `INSERT INTO arsip (sekolah_id, pemilik, jenis_dokumen, file, file_name, tahun, bulan, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      [gtk.sekolah_id, gtk.nama, jenisDokumen, dataUrl, file, String(now.getFullYear()), now.getMonth() + 1]
+    );
+    console.log(`  IMPORT: ${file} -> ${gtk.nama} (${gtk.nip || gtk.nuptk || gtk.nik || "-"}) [${jenisDokumen}]`);
+  }
+}
+
 async function main() {
   const folders = readdirSync(BASE, { withFileTypes: true }).filter(d => d.isDirectory());
 
-  let totalImport = 0;
-  let totalSkipped = 0;
-  let totalMatch = 0;
-  let totalNoMatch = 0;
+  const stats = { imported: 0, skipped: 0, noMatch: 0 };
+  const NESTED_FOLDERS = ["dokumen pppk paruh waktu"];
 
   for (const folder of folders) {
+    if (NESTED_FOLDERS.includes(folder.name)) {
+      const basePath = join(BASE, folder.name);
+      const subFolders = readdirSync(basePath, { withFileTypes: true }).filter(d => d.isDirectory());
+      for (const sub of subFolders) {
+        const jenisDokumen = MAP_JENIS[sub.name] || "Dokumen GTK";
+        const subPath = join(basePath, sub.name);
+        await processFolder(subPath, jenisDokumen, stats);
+      }
+      continue;
+    }
+
     const jenisDokumen = MAP_JENIS[folder.name] || "Dokumen GTK";
     const folderPath = join(BASE, folder.name);
-    const files = readdirSync(folderPath).filter(f => {
-      const ext = f.toLowerCase();
-      return ext.endsWith(".pdf") || ext.endsWith(".jpg") || ext.endsWith(".jpeg") || ext.endsWith(".png");
-    });
-
-    for (const file of files) {
-      totalImport++;
-      const filePath = join(folderPath, file);
-      const { nip, name, beforeDash, afterDash } = extractNipName(file);
-
-      if (!nip && (!name || name.length < 2)) {
-        console.log(`  SKIP (no identifier): ${file}`);
-        totalSkipped++;
-        continue;
-      }
-
-      const gtk = await matchGtk(nip, name, beforeDash, afterDash);
-      if (!gtk) {
-        console.log(`  NO MATCH: ${file} (nip=${nip || "-"}, name=${name}, before=${beforeDash || "-"}, after=${afterDash || "-"})`);
-        totalNoMatch++;
-        continue;
-      }
-
-      totalMatch++;
-      const buf = readFileSync(filePath);
-      const base64 = buf.toString("base64");
-      const mime = extname(file).toLowerCase() === ".pdf" ? "application/pdf"
-        : extname(file).toLowerCase() === ".png" ? "image/png"
-        : "image/jpeg";
-      const dataUrl = `data:${mime};base64,${base64}`;
-      const fileSize = buf.length;
-
-      const now = new Date();
-      await client.execute(
-        `INSERT INTO arsip (sekolah_id, pemilik, jenis_dokumen, file, file_name, tahun, bulan, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-        [gtk.sekolah_id, gtk.nama, jenisDokumen, dataUrl, file, String(now.getFullYear()), now.getMonth() + 1]
-      );
-
-      console.log(`  IMPORT: ${file} -> ${gtk.nama} (${gtk.nip || gtk.nuptk || gtk.nik || "-"})`);
-    }
+    await processFolder(folderPath, jenisDokumen, stats);
   }
 
+  const total = stats.imported + stats.noMatch + stats.skipped;
   console.log("\n=== SUMMARY ===");
-  console.log(`Total files: ${totalImport}`);
-  console.log(`Matched & imported: ${totalMatch}`);
-  console.log(`No match: ${totalNoMatch}`);
-  console.log(`Skipped: ${totalSkipped}`);
+  console.log(`Total files: ${total}`);
+  console.log(`Imported: ${stats.imported}`);
+  console.log(`No match: ${stats.noMatch}`);
+  console.log(`Skipped (duplicate/no id): ${stats.skipped}`);
 }
 
 main().catch(console.error);
