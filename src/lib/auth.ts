@@ -21,11 +21,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             args: [user.email!],
           });
           if (!existing.rows.length) {
-            await db.execute({
-              sql: `INSERT INTO users (email, name, avatar, role, status, created_at)
-                   VALUES (?, ?, ?, 'staf', 'aktif', datetime('now'))`,
-              args: [user.email!, user.name!, user.image!],
-            });
+            return false;
           } else if ((existing.rows[0].status as string) !== "aktif") {
             return false;
           }

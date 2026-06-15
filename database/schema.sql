@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   avatar TEXT,
-  role TEXT NOT NULL DEFAULT 'staf' CHECK(role IN ('ketua','admin','staf')),
+  role TEXT NOT NULL DEFAULT 'staf' CHECK(role IN ('ketua','admin','staf','operator_sekolah')),
   status TEXT NOT NULL DEFAULT 'aktif' CHECK(status IN ('aktif','nonaktif')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

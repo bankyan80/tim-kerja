@@ -45,6 +45,7 @@ const roleOptions = [
   { value: "ketua", label: "Ketua" },
   { value: "admin", label: "Admin" },
   { value: "staf", label: "Staf" },
+  { value: "operator_sekolah", label: "Operator Sekolah" },
 ];
 
 const statusOptions = [
@@ -75,66 +76,79 @@ const initialPermissions: PermissionMap = {
     ketua: { view: true, create: false, edit: false, delete: false, verify: true },
     admin: { view: true, create: false, edit: false, delete: false, verify: false },
     staf: { view: true, create: false, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: false, edit: false, delete: false, verify: false },
   },
   Persuratan: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: true, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: false, delete: false, verify: false },
   },
   "Data Sekolah": {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: false, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: false, edit: false, delete: false, verify: false },
   },
   "Data Siswa": {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: true, edit: true, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: true, delete: false, verify: false },
   },
   "Data GTK": {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: false, edit: true, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: true, delete: false, verify: false },
   },
   Laporan: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: true, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: false, delete: false, verify: false },
   },
   Sarpras: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: false },
     staf: { view: true, create: true, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: false, delete: false, verify: false },
   },
   SPMB: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: true, edit: true, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: true, delete: false, verify: false },
   },
   Kegiatan: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: true, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: false, delete: false, verify: false },
   },
   Arsip: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: true, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: true, edit: false, delete: false, verify: false },
   },
   Monitoring: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: false },
     staf: { view: true, create: false, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: false, edit: false, delete: false, verify: false },
   },
   Rekap: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: true, edit: true, delete: false, verify: true },
     staf: { view: true, create: false, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: true, create: false, edit: false, delete: false, verify: false },
   },
   Pengaturan: {
     ketua: { view: true, create: true, edit: true, delete: true, verify: true },
     admin: { view: true, create: false, edit: false, delete: false, verify: false },
     staf: { view: false, create: false, edit: false, delete: false, verify: false },
+    operator_sekolah: { view: false, create: false, edit: false, delete: false, verify: false },
   },
 };
 
@@ -184,7 +198,7 @@ export default function PengaturanPage() {
     reader.readAsDataURL(file);
   }
 
-  const roleLabels: Record<UserRole, string> = { ketua: "Ketua", admin: "Admin", staf: "Staf" };
+  const roleLabels: Record<UserRole, string> = { ketua: "Ketua", admin: "Admin", staf: "Staf", operator_sekolah: "Operator Sekolah" };
   const permissionLabels: Record<PermissionAction, string> = {
     view: "Lihat", create: "Buat", edit: "Edit", delete: "Hapus", verify: "Verifikasi",
   };
@@ -479,7 +493,7 @@ export default function PengaturanPage() {
                           <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
                           <td className="px-4 py-3 text-gray-600">{user.email}</td>
                           <td className="px-4 py-3">
-                            <Badge variant={user.role === "ketua" ? "danger" : user.role === "admin" ? "info" : "default"}>
+                            <Badge variant={user.role === "ketua" ? "danger" : user.role === "admin" ? "info" : user.role === "operator_sekolah" ? "warning" : "default"}>
                               {roleLabels[user.role]}
                             </Badge>
                           </td>
@@ -526,7 +540,7 @@ export default function PengaturanPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase sticky left-0 bg-gray-50">Modul</th>
-                      {(["ketua", "admin", "staf"] as const).map((role) => (
+                      {(["ketua", "admin", "staf", "operator_sekolah"] as const).map((role) => (
                         <th
                           key={role}
                           colSpan={5}
@@ -538,7 +552,7 @@ export default function PengaturanPage() {
                     </tr>
                     <tr>
                       <th className="px-4 py-2 sticky left-0 bg-gray-50"></th>
-                      {(["ketua", "admin", "staf"] as const).map((role) =>
+                      {(["ketua", "admin", "staf", "operator_sekolah"] as const).map((role) =>
                         (["view", "create", "edit", "delete", "verify"] as const).map((action) => (
                           <th
                             key={`${role}-${action}`}
@@ -556,7 +570,7 @@ export default function PengaturanPage() {
                         <td className="px-4 py-3 font-medium text-gray-800 sticky left-0 bg-white whitespace-nowrap">
                           {mod}
                         </td>
-                        {(["ketua", "admin", "staf"] as const).map((role) =>
+                        {(["ketua", "admin", "staf", "operator_sekolah"] as const).map((role) =>
                           (["view", "create", "edit", "delete", "verify"] as const).map((action) => (
                             <td key={`${mod}-${role}-${action}`} className="px-2 py-3 text-center border-l">
                               {isAdmin ? (

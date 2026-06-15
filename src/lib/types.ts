@@ -1,4 +1,4 @@
-export type UserRole = "ketua" | "admin" | "staf";
+export type UserRole = "ketua" | "admin" | "staf" | "operator_sekolah";
 
 export type AppUser = {
   id: string;
