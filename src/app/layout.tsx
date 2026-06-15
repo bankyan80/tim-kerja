@@ -3,8 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/providers/Providers";
 import { Toaster } from "react-hot-toast";
-import Topbar from "@/components/layout/Topbar";
-import Navigation from "@/components/layout/Navigation";
+import TopbarNavigation from "@/components/layout/TopbarNavigation";
 import BottomNav from "@/components/layout/BottomNav";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -23,8 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-gray-100">
         <Providers>
           <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-          <Topbar />
-          <Navigation />
+          <TopbarNavigation />
           <main className="pb-20 md:pb-8">
             {children}
           </main>
