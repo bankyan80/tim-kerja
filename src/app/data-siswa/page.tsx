@@ -62,14 +62,7 @@ interface SekolahOption {
   nama: string;
 }
 
-const sekolahList: SekolahOption[] = [
-  { id: "1", nama: "SD Negeri 1 Lemahabang" },
-  { id: "2", nama: "SD Negeri 2 Lemahabang" },
-  { id: "3", nama: "SD Negeri 3 Lemahabang" },
-  { id: "4", nama: "SD Negeri 4 Lemahabang" },
-  { id: "5", nama: "MI Al-Ihsan Lemahabang" },
-  { id: "6", nama: "SD IT Bina Cendekia" },
-];
+const sekolahList: SekolahOption[] = [];
 
 const kelasOptions: Kelas[] = ["I", "II", "III", "IV", "V", "VI"];
 
@@ -111,6 +104,7 @@ export default function DataSiswaPage() {
 
   const [data, setData] = useState<Siswa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Siswa>(defaultForm);
@@ -124,6 +118,7 @@ export default function DataSiswaPage() {
 
   useEffect(() => {
     fetch("/api/siswa").then(r => r.json()).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
   }, []);
 
   const filteredData = useMemo(() => {
