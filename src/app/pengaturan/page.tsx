@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import {
   Settings,
@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Clock,
   HardDrive,
+  Camera,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -160,6 +161,27 @@ export default function PengaturanPage() {
   const [editUserRole, setEditUserRole] = useState<UserRole>("staf");
   const [editUserStatus, setEditUserStatus] = useState<"aktif" | "nonaktif">("aktif");
 
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
   const roleLabels: Record<UserRole, string> = { ketua: "Ketua", admin: "Admin", staf: "Staf" };
   const permissionLabels: Record<PermissionAction, string> = {
     view: "Lihat", create: "Buat", edit: "Edit", delete: "Hapus", verify: "Verifikasi",
@@ -262,14 +284,19 @@ export default function PengaturanPage() {
             <CardContent>
               <div className="max-w-lg space-y-4">
                 <div className="flex items-center gap-4 pb-4 border-b">
-                  <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-bold shrink-0">
-                    {session?.user?.name?.charAt(0) || "U"}
+                  <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-bold shrink-0 overflow-hidden">
+                    {fotoPreview ? (
+                      <img src={fotoPreview} alt="Foto" className="w-full h-full object-cover" />
+                    ) : (
+                      session?.user?.name?.charAt(0) || "U"
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Foto Profil</p>
-                    <Button size="sm" variant="outline" className="mt-1">
-                      <Upload className="w-3 h-3 mr-1" />
-                      Unggah Foto
+                    <input ref={fotoInputRef} type="file" accept="image/*" className="hidden" onChange={handleFotoUpload} />
+                    <Button size="sm" variant="outline" className="mt-1" onClick={() => fotoInputRef.current?.click()}>
+                      <Camera className="w-3 h-3 mr-1" />
+                      {fotoPreview ? "Ganti Foto" : "Unggah Foto"}
                     </Button>
                   </div>
                 </div>
@@ -304,12 +331,17 @@ export default function PengaturanPage() {
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">Logo Aplikasi</label>
                   <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border">
-                      <Upload className="w-6 h-6" />
+                    <div className="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border overflow-hidden">
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="w-6 h-6" />
+                      )}
                     </div>
-                    <Button size="sm" variant="outline">
+                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                    <Button size="sm" variant="outline" onClick={() => logoInputRef.current?.click()}>
                       <Upload className="w-3 h-3 mr-1" />
-                      Unggah Logo
+                      {logoPreview ? "Ganti Logo" : "Unggah Logo"}
                     </Button>
                   </div>
                 </div>
