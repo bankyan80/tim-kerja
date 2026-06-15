@@ -41,6 +41,7 @@ export function DataTable<TData>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
     initialState: { pagination: { pageSize } },
   });
 
