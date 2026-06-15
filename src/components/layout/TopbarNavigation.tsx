@@ -61,7 +61,7 @@ export default function TopbarNavigation() {
         <div className="w-px h-6 bg-gray-200 hidden md:block" />
 
         {/* Nav Links */}
-        <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto flex-1 min-w-0">
+        <nav className="hidden md:flex items-center gap-0.5 flex-1 min-w-0">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/" && pathname === "/");
@@ -81,40 +81,41 @@ export default function TopbarNavigation() {
               </Link>
             );
           })}
-
-          <div className="relative" ref={moreRef}>
-            <button
-              onClick={() => setShowMore(!showMore)}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
-                showMore ? "text-blue-700 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              )}
-            >
-              <MoreHorizontal className="w-3.5 h-3.5" />
-              Lainnya
-              <ChevronDown className="w-3 h-3" />
-            </button>
-
-            {showMore && (
-              <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                {extraItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setShowMore(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </nav>
+
+        {/* Lainnya dropdown (outside nav to avoid overflow clip) */}
+        <div className="hidden md:block relative" ref={moreRef}>
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
+              showMore ? "text-blue-700 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            )}
+          >
+            <MoreHorizontal className="w-3.5 h-3.5" />
+            Lainnya
+            <ChevronDown className="w-3 h-3" />
+          </button>
+
+          {showMore && (
+            <div className="absolute top-full mt-1 left-0 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+              {extraItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setShowMore(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Right side */}
         <div className="flex items-center gap-1 ml-auto shrink-0">
