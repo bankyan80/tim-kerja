@@ -30,7 +30,16 @@ type JenisDokumen =
   | "SPMB"
   | "Kegiatan"
   | "Monitoring"
-  | "Lainnya";
+  | "Lainnya"
+  | "BPJS Kesehatan"
+  | "Ijazah"
+  | "KTP"
+  | "Kartu Keluarga"
+  | "NPWP"
+  | "Pass Foto"
+  | "SK PPPK PW"
+  | "SK Penugasan"
+  | "Sertifikat Pendidik";
 
 interface VersiArsip {
   versi: number;
@@ -71,6 +80,15 @@ const jenisDokumenList: JenisDokumen[] = [
   "Kegiatan",
   "Monitoring",
   "Lainnya",
+  "BPJS Kesehatan",
+  "Ijazah",
+  "KTP",
+  "Kartu Keluarga",
+  "NPWP",
+  "Pass Foto",
+  "SK PPPK PW",
+  "SK Penugasan",
+  "Sertifikat Pendidik",
 ];
 
 const jenisDokumenBadge: Record<JenisDokumen, { variant: "default" | "success" | "warning" | "danger" | "info" }> = {
@@ -84,6 +102,15 @@ const jenisDokumenBadge: Record<JenisDokumen, { variant: "default" | "success" |
   Kegiatan: { variant: "success" },
   Monitoring: { variant: "default" },
   Lainnya: { variant: "default" },
+  "BPJS Kesehatan": { variant: "info" },
+  Ijazah: { variant: "success" },
+  KTP: { variant: "info" },
+  "Kartu Keluarga": { variant: "info" },
+  NPWP: { variant: "warning" },
+  "Pass Foto": { variant: "success" },
+  "SK PPPK PW": { variant: "warning" },
+  "SK Penugasan": { variant: "warning" },
+  "Sertifikat Pendidik": { variant: "success" },
 };
 
 const bulanOptions = Array.from({ length: 12 }, (_, i) => ({
