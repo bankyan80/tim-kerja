@@ -76,6 +76,8 @@ const statusPegawaiOptions: StatusPegawai[] = [
 const jenisGtkOptions: JenisGTK[] = ["Kepala Sekolah", "Guru", "Tenaga Kependidikan"];
 
 const pendidikanOptions = [
+  "SD/Sederajat",
+  "SMP/Sederajat",
   "SMA/Sederajat",
   "D1",
   "D2",
