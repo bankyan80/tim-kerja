@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const b = await req.json();
-    const { sekolah_id, tahun_pelajaran, daya_tampung, pendaftar, diterima, jalur_domisili, jalur_afirmasi, jalur_mutasi } = b;
-    await execute(`INSERT INTO spmb (sekolah_id, tahun_pelajaran, daya_tampung, pendaftar, diterima, jalur_domisili, jalur_afirmasi, jalur_mutasi) VALUES (?,?,?,?,?,?,?,?)`, [sekolah_id, tahun_pelajaran, daya_tampung||0, pendaftar||0, diterima||0, jalur_domisili||0, jalur_afirmasi||0, jalur_mutasi||0]);
+    const { sekolah_id, tahun_pelajaran, daya_tampung, pendaftar, diterima, jalur_domisili, jalur_afirmasi, jalur_mutasi, jenis_kelamin } = b;
+    await execute(`INSERT INTO spmb (sekolah_id, tahun_pelajaran, daya_tampung, pendaftar, diterima, jalur_domisili, jalur_afirmasi, jalur_mutasi, jenis_kelamin) VALUES (?,?,?,?,?,?,?,?,?)`, [sekolah_id, tahun_pelajaran, daya_tampung||0, pendaftar||0, diterima||0, jalur_domisili||0, jalur_afirmasi||0, jalur_mutasi||0, jenis_kelamin||null]);
     return NextResponse.json({ ok: true });
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
 }

@@ -29,6 +29,7 @@ interface SPMB {
   jalur_domisili: number;
   jalur_afirmasi: number;
   jalur_mutasi: number;
+  jenis_kelamin?: string;
 }
 
 interface SekolahOption {
@@ -56,6 +57,7 @@ const defaultForm: SPMB = {
   jalur_domisili: 0,
   jalur_afirmasi: 0,
   jalur_mutasi: 0,
+  jenis_kelamin: "",
 };
 
 export default function SPMBPage() {
@@ -119,6 +121,15 @@ export default function SPMBPage() {
     { header: "Diterima", accessorKey: "diterima" },
     { header: "Jalur Domisili", accessorKey: "jalur_domisili" },
     { header: "Jalur Afirmasi", accessorKey: "jalur_afirmasi" },
+    {
+      header: "Jenis Kelamin",
+      accessorKey: "jenis_kelamin",
+      cell: ({ row }) => {
+        const jk = row.original.jenis_kelamin;
+        if (!jk) return "-";
+        return jk === "L" ? "Laki-laki" : "Perempuan";
+      },
+    },
     { header: "Jalur Mutasi", accessorKey: "jalur_mutasi" },
     {
       header: "Aksi",
@@ -312,6 +323,17 @@ export default function SPMBPage() {
             onChange={(e) => updateForm("tahun_pelajaran", e.target.value)}
             options={tahunPelajaranOptions.map((t) => ({ value: t, label: t }))}
           />
+          <Select
+            label="Jenis Kelamin"
+            id="jenis_kelamin"
+            value={form.jenis_kelamin || ""}
+            onChange={(e) => updateForm("jenis_kelamin", e.target.value)}
+            options={[
+              { value: "", label: "Semua" },
+              { value: "L", label: "Laki-laki" },
+              { value: "P", label: "Perempuan" },
+            ]}
+          />
           <Input
             label="Daya Tampung"
             id="daya_tampung"
@@ -379,6 +401,7 @@ export default function SPMBPage() {
               <DetailField label="Daya Tampung" value={String(viewing.daya_tampung)} />
               <DetailField label="Pendaftar" value={String(viewing.pendaftar)} />
               <DetailField label="Diterima" value={String(viewing.diterima)} />
+              <DetailField label="Jenis Kelamin" value={viewing.jenis_kelamin === "L" ? "Laki-laki" : viewing.jenis_kelamin === "P" ? "Perempuan" : "Semua"} />
               <DetailField label="Jalur Domisili" value={String(viewing.jalur_domisili)} />
               <DetailField label="Jalur Afirmasi" value={String(viewing.jalur_afirmasi)} />
               <DetailField label="Jalur Mutasi" value={String(viewing.jalur_mutasi)} />
