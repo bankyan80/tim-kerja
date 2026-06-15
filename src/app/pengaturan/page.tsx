@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import {
@@ -149,10 +149,11 @@ const backupHistory = [
 export default function PengaturanPage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState("profil");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [users, setUsers] = useState<UserType[]>(initialUsers);
+  const [users, setUsers] = useState<UserType[]>([]);
   const [permissions, setPermissions] = useState<PermissionMap>(initialPermissions);
+  const [settings, setSettings] = useState<Record<string, string>>({});
 
   const [showAddUser, setShowAddUser] = useState(false);
   const [addUserEmail, setAddUserEmail] = useState("");
@@ -190,10 +191,36 @@ export default function PengaturanPage() {
 
   const isAdmin = session?.user?.role === "ketua" || session?.user?.role === "admin";
 
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [usersRes, settingsRes] = await Promise.all([
+          fetch("/api/pengaturan"),
+          fetch("/api/pengaturan/settings"),
+        ]);
+        const usersData = await usersRes.json();
+        const settingsData = await settingsRes.json();
+        if (Array.isArray(usersData)) setUsers(usersData);
+        if (settingsData && !settingsData.error) setSettings(settingsData);
+      } catch {
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
   if (loading) return <Loading message="Memuat pengaturan..." />;
 
-  function handleAddUser() {
+  async function handleAddUser() {
     if (!addUserEmail.trim()) return;
+    const res = await fetch("/api/pengaturan", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add_user", email: addUserEmail.trim(), role: addUserRole }),
+    });
+    if (!res.ok) { toast.error("Gagal menambahkan user"); return; }
     const newUser: UserType = {
       id: String(Date.now()),
       email: addUserEmail.trim(),
@@ -215,8 +242,13 @@ export default function PengaturanPage() {
     setEditUserStatus(user.status);
   }
 
-  function handleEditUser() {
+  async function handleEditUser() {
     if (!editingUser) return;
+    await fetch("/api/pengaturan", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update_user", id: editingUser.id, role: editUserRole, status: editUserStatus }),
+    });
     setUsers((prev) =>
       prev.map((u) =>
         u.id === editingUser.id ? { ...u, role: editUserRole, status: editUserStatus } : u
@@ -307,7 +339,19 @@ export default function PengaturanPage() {
                 <Input label="Email" id="email" type="email" defaultValue={session?.user?.email || ""} />
                 <Input label="Password Baru" id="password" type="password" placeholder="Biarkan kosong jika tidak diubah" />
                 <div className="flex justify-end pt-2">
-                  <Button onClick={() => toast.success("Profil berhasil disimpan")}>
+                  <Button onClick={async () => {
+                    const payload: Record<string, string> = {};
+                    const nama = (document.getElementById("nama") as HTMLInputElement)?.value;
+                    if (nama) payload.name = nama;
+                    if (fotoPreview) payload.foto = fotoPreview;
+                    const res = await fetch("/api/pengaturan/profile", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload),
+                    });
+                    if (res.ok) toast.success("Profil berhasil disimpan");
+                    else toast.error("Gagal menyimpan profil");
+                  }}>
                     <Save className="w-4 h-4 mr-2" />
                     Simpan Profil
                   </Button>
@@ -328,15 +372,17 @@ export default function PengaturanPage() {
             </CardHeader>
             <CardContent>
               <div className="max-w-lg space-y-4">
-                <Input label="Nama Aplikasi" id="nama_aplikasi" defaultValue="Sistem Informasi Kecamatan Lemahabang" />
-                <Input label="Instansi" id="instansi" defaultValue="Kecamatan Lemahabang" />
-                <Input label="Wilayah" id="wilayah" defaultValue="Kecamatan Lemahabang, Kabupaten Cirebon" />
+                <Input label="Nama Aplikasi" id="nama_aplikasi" defaultValue={settings.nama_aplikasi || "Sistem Informasi Kecamatan Lemahabang"} />
+                <Input label="Instansi" id="instansi" defaultValue={settings.instansi || "Kecamatan Lemahabang"} />
+                <Input label="Wilayah" id="wilayah" defaultValue={settings.wilayah || "Kecamatan Lemahabang, Kabupaten Cirebon"} />
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">Logo Aplikasi</label>
                   <div className="flex items-center gap-3">
                     <div className="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 border overflow-hidden">
                       {logoPreview ? (
                         <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                      ) : settings.logo ? (
+                        <img src={settings.logo} alt="Logo" className="w-full h-full object-cover" />
                       ) : (
                         <Camera className="w-6 h-6" />
                       )}
@@ -351,7 +397,7 @@ export default function PengaturanPage() {
                 <Select
                   label="Tahun Pelajaran Aktif"
                   id="tahun_pelajaran"
-                  defaultValue="2025/2026"
+                  defaultValue={settings.tahun_pelajaran || "2025/2026"}
                   options={[
                     { value: "2024/2025", label: "2024/2025" },
                     { value: "2025/2026", label: "2025/2026" },
@@ -361,10 +407,24 @@ export default function PengaturanPage() {
                 <Input
                   label="Format Penomoran Surat"
                   id="format_nomor"
-                  defaultValue="{nomor}/SURAT/{bulan_romawi}/{tahun}"
+                  defaultValue={settings.format_nomor_surat || "{nomor}/SURAT/{bulan_romawi}/{tahun}"}
                 />
                 <div className="flex justify-end pt-2">
-                  <Button onClick={() => toast.success("Pengaturan aplikasi berhasil disimpan")}>
+                  <Button onClick={async () => {
+                    const data: Record<string, string> = {};
+                    for (const id of ["nama_aplikasi", "instansi", "wilayah", "tahun_pelajaran", "format_nomor"]) {
+                      const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+                      if (el) data[id] = el.value;
+                    }
+                    if (logoPreview) data.logo = logoPreview;
+                    const res = await fetch("/api/pengaturan/settings", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(data),
+                    });
+                    if (res.ok) toast.success("Pengaturan aplikasi berhasil disimpan");
+                    else toast.error("Gagal menyimpan pengaturan");
+                  }}>
                     <Save className="w-4 h-4 mr-2" />
                     Simpan Pengaturan
                   </Button>
