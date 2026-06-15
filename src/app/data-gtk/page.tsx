@@ -287,16 +287,17 @@ export default function DataGTKPage() {
   }
 
   async function handleSave() {
+    const payload = (({ id, nik, nip, nuptk, nama, jenis_kelamin, tempat_lahir, tanggal_lahir, status_pegawai, jabatan, jenis_gtk, sekolah_id, pangkat_golongan, pendidikan_terakhir, sertifikasi, nrg, masa_kerja, tmt, nomor_sk, bup, kontak, status_aktif }) => ({ id, nik, nip, nuptk, nama, jenis_kelamin, tempat_lahir, tanggal_lahir, status_pegawai, jabatan, jenis_gtk, sekolah_id, pangkat_golongan, pendidikan_terakhir, sertifikasi: sertifikasi ? 1 : 0, nrg, masa_kerja, tmt, nomor_sk, bup, kontak, status_aktif }))(form);
     if (editingId) {
       const res = await fetch("/api/gtk", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, sertifikasi: form.sertifikasi ? 1 : 0 }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) { setData((prev) => prev.map((g) => (g.id === editingId ? { ...form, id: editingId } : g))); toast.success("GTK berhasil diupdate"); }
     } else {
       const res = await fetch("/api/gtk", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, sertifikasi: form.sertifikasi ? 1 : 0 }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) { const newId = String(Date.now()); setData((prev) => [...prev, { ...form, id: newId }]); toast.success("GTK berhasil ditambahkan"); }
     }
