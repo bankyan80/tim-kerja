@@ -137,6 +137,7 @@ export default function ArsipPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Arsip>(defaultForm);
   const [viewing, setViewing] = useState<Arsip | null>(null);
+  const [driveLink, setDriveLink] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterJenisDokumen, setFilterJenisDokumen] = useState("");
@@ -241,6 +242,7 @@ export default function ArsipPage() {
 
   function openAddModal() {
     setEditingId(null);
+    setDriveLink("");
     setForm({
       ...defaultForm,
       tanggal_upload: new Date().toISOString().split("T")[0],
@@ -253,11 +255,16 @@ export default function ArsipPage() {
   function handleEdit(arsip: Arsip) {
     setEditingId(arsip.id);
     setForm({ ...arsip });
+    setDriveLink(arsip.file.startsWith("http") ? arsip.file : "");
     setModalOpen(true);
   }
 
   function handleDownload(arsip: Arsip) {
-    alert(`Mengunduh: ${arsip.file} (${arsip.file_size})`);
+    if (arsip.file.startsWith("http")) {
+      window.open(arsip.file, "_blank");
+    } else {
+      alert(`Mengunduh: ${arsip.file} (${arsip.file_size})`);
+    }
   }
 
   async function handleDelete() {
@@ -274,28 +281,22 @@ export default function ArsipPage() {
 
   async function handleSave() {
     try {
-      const payload = {
-        ...form,
-        versi: editingId ? form.versi : 1,
-      };
+      const fileValue = driveLink || form.file;
+      const payload = (({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, catatan }) => ({ id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file: fileValue, file_size: driveLink ? "" : form.file_size, versi: editingId ? form.versi : 1, catatan: catatan || "" }))(form);
       if (editingId) {
         const res = await fetch("/api/arsip", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const updated = await res.json();
-        setData((prev) => prev.map((a) => (a.id === editingId ? updated : a)));
-        toast.success("Arsip berhasil diperbarui");
+        if (res.ok) { setData((prev) => prev.map((a) => (a.id === editingId ? { ...form, id: editingId, file: fileValue, file_size: driveLink ? "" : form.file_size } : a))); toast.success("Arsip berhasil diperbarui"); }
       } else {
         const res = await fetch("/api/arsip", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const created = await res.json();
-        setData((prev) => [...prev, created]);
-        toast.success("Arsip berhasil dibuat");
+        if (res.ok) { toast.success("Arsip berhasil dibuat"); fetch("/api/arsip").then(r => r.json()).then(d => setData(d)); }
       }
     } catch {
       toast.error("Gagal menyimpan arsip");
@@ -440,7 +441,7 @@ export default function ArsipPage() {
               onChange={(e) => updateForm("pemilik", e.target.value)}
             />
             <Input
-              label="File"
+              label="Upload File"
               id="file"
               type="file"
               onChange={(e) => {
@@ -448,8 +449,17 @@ export default function ArsipPage() {
                 if (file) {
                   updateForm("file", file.name);
                   updateForm("file_size", `${(file.size / (1024 * 1024)).toFixed(1)} MB`);
+                  setDriveLink("");
                 }
               }}
+            />
+            <div className="text-xs text-gray-400 text-center">- atau -</div>
+            <Input
+              label="Link Google Drive"
+              id="drive_link"
+              value={driveLink}
+              onChange={(e) => { setDriveLink(e.target.value); if (e.target.value) updateForm("file", e.target.value); }}
+              placeholder="https://drive.google.com/file/d/..."
             />
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
@@ -483,7 +493,11 @@ export default function ArsipPage() {
               <DetailField label="Tahun" value={viewing.tahun} />
               <DetailField label="Pemilik" value={viewing.pemilik} />
               <DetailField label="File" value={viewing.file} />
-              <DetailField label="Ukuran File" value={viewing.file_size} />
+              {viewing.file.startsWith("http") ? (
+                <a href={viewing.file} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Buka Link Drive</a>
+              ) : (
+                <DetailField label="Ukuran File" value={viewing.file_size} />
+              )}
               <DetailField label="Versi" value={`v${viewing.versi}`} />
               <DetailField label="Tanggal Upload" value={formatDate(viewing.tanggal_upload)} />
             </div>
@@ -515,7 +529,7 @@ export default function ArsipPage() {
                           <td className="px-3 py-2">{formatDate(v.tanggal_upload)}</td>
                           <td className="px-3 py-2 text-center">
                             <button
-                              onClick={() => alert(`Mengunduh: ${v.file}`)}
+                              onClick={() => v.file.startsWith("http") ? window.open(v.file, "_blank") : alert(`Mengunduh: ${v.file}`)}
                               className="p-1 text-green-600 hover:bg-green-50 rounded inline-flex"
                               title="Unduh versi ini"
                             >
