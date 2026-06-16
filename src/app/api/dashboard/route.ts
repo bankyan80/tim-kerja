@@ -7,34 +7,64 @@ export async function GET(req: NextRequest) {
     const { forcedSekolah } = await getSekolahFilter();
     const sid = forcedSekolah;
 
-    const wh = sid ? " WHERE sekolah_id = ?" : " WHERE deleted_at IS NULL";
-    const whs = sid ? " WHERE s.sekolah_id = ?" : " WHERE s.deleted_at IS NULL";
-    const args = sid ? [sid] : [];
+    let sql: string;
+    let args: string[] | undefined;
 
-    const [sekolah, siswa, gtk, surat, laporan, sarpras, spmb, kegiatan, arsip] = await Promise.all([
-      sid
-        ? queryAll("SELECT COUNT(*) as total, 1 as aktif, SUM(CASE WHEN status='negeri' THEN 1 ELSE 0 END) as negeri, SUM(CASE WHEN status='swasta' THEN 1 ELSE 0 END) as swasta FROM sekolah WHERE id = ? AND deleted_at IS NULL", [sid])
-        : queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN status_aktif='aktif' THEN 1 ELSE 0 END) as aktif, SUM(CASE WHEN status='negeri' THEN 1 ELSE 0 END) as negeri, SUM(CASE WHEN status='swasta' THEN 1 ELSE 0 END) as swasta FROM sekolah WHERE deleted_at IS NULL"),
-      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis_kelamin='L' THEN 1 ELSE 0 END) as laki, SUM(CASE WHEN jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan FROM siswa" + wh, args),
-      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN status_pegawai='PNS' THEN 1 ELSE 0 END) as pns FROM gtk" + wh, args),
-      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN status='draft' OR status='dikirim' OR status='diproses' THEN 1 ELSE 0 END) as belum_diproses FROM surat WHERE deleted_at IS NULL"),
-      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN status='terverifikasi' THEN 1 ELSE 0 END) as selesai FROM laporan_bulanan" + whs, args),
-      queryAll("SELECT COUNT(*) as total FROM sarpras" + whs, args),
-      queryAll("SELECT COUNT(*) as total FROM spmb" + (sid ? " WHERE sekolah_id = ?" : ""), sid ? [sid] : []),
-      queryAll("SELECT COUNT(*) as total FROM kegiatan WHERE deleted_at IS NULL"),
-      queryAll("SELECT COUNT(*) as total FROM arsip" + whs, args),
-    ]);
+    if (sid) {
+      sql = `SELECT
+        (SELECT COUNT(*) FROM sekolah WHERE id = ? AND deleted_at IS NULL) as sekolah_total,
+        1 as sekolah_aktif,
+        (SELECT COUNT(*) FROM sekolah WHERE id = ? AND status = 'negeri' AND deleted_at IS NULL) as sekolah_negeri,
+        (SELECT COUNT(*) FROM sekolah WHERE id = ? AND status = 'swasta' AND deleted_at IS NULL) as sekolah_swasta,
+        (SELECT COUNT(*) FROM siswa WHERE sekolah_id = ? AND deleted_at IS NULL) as siswa_total,
+        (SELECT COUNT(*) FROM siswa WHERE sekolah_id = ? AND jenis_kelamin = 'L' AND deleted_at IS NULL) as siswa_laki,
+        (SELECT COUNT(*) FROM siswa WHERE sekolah_id = ? AND jenis_kelamin = 'P' AND deleted_at IS NULL) as siswa_perempuan,
+        (SELECT COUNT(*) FROM gtk WHERE sekolah_id = ? AND deleted_at IS NULL) as gtk_total,
+        (SELECT COUNT(*) FROM gtk WHERE sekolah_id = ? AND status_pegawai = 'PNS' AND deleted_at IS NULL) as gtk_pns,
+        (SELECT COUNT(*) FROM surat WHERE deleted_at IS NULL AND (status = 'draft' OR status = 'dikirim' OR status = 'diproses')) as surat_belum_diproses,
+        (SELECT COUNT(*) FROM laporan_bulanan WHERE sekolah_id = ? AND deleted_at IS NULL) as laporan_total,
+        (SELECT COUNT(*) FROM laporan_bulanan WHERE sekolah_id = ? AND status = 'terverifikasi' AND deleted_at IS NULL) as laporan_selesai,
+        (SELECT COUNT(*) FROM sarpras WHERE sekolah_id = ? AND deleted_at IS NULL) as sarpras_total,
+        (SELECT COUNT(*) FROM spmb WHERE sekolah_id = ?) as spmb_total,
+        (SELECT COUNT(*) FROM kegiatan WHERE deleted_at IS NULL) as kegiatan_total,
+        (SELECT COUNT(*) FROM arsip WHERE sekolah_id = ? AND deleted_at IS NULL) as arsip_total`;
+      args = [sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid];
+    } else {
+      sql = `SELECT
+        (SELECT COUNT(*) FROM sekolah WHERE deleted_at IS NULL) as sekolah_total,
+        (SELECT COUNT(*) FROM sekolah WHERE status_aktif = 'aktif' AND deleted_at IS NULL) as sekolah_aktif,
+        (SELECT COUNT(*) FROM sekolah WHERE status = 'negeri' AND deleted_at IS NULL) as sekolah_negeri,
+        (SELECT COUNT(*) FROM sekolah WHERE status = 'swasta' AND deleted_at IS NULL) as sekolah_swasta,
+        (SELECT COUNT(*) FROM siswa WHERE deleted_at IS NULL) as siswa_total,
+        (SELECT COUNT(*) FROM siswa WHERE jenis_kelamin = 'L' AND deleted_at IS NULL) as siswa_laki,
+        (SELECT COUNT(*) FROM siswa WHERE jenis_kelamin = 'P' AND deleted_at IS NULL) as siswa_perempuan,
+        (SELECT COUNT(*) FROM gtk WHERE deleted_at IS NULL) as gtk_total,
+        (SELECT COUNT(*) FROM gtk WHERE status_pegawai = 'PNS' AND deleted_at IS NULL) as gtk_pns,
+        (SELECT COUNT(*) FROM surat WHERE deleted_at IS NULL AND (status = 'draft' OR status = 'dikirim' OR status = 'diproses')) as surat_belum_diproses,
+        (SELECT COUNT(*) FROM laporan_bulanan WHERE deleted_at IS NULL) as laporan_total,
+        (SELECT COUNT(*) FROM laporan_bulanan WHERE status = 'terverifikasi' AND deleted_at IS NULL) as laporan_selesai,
+        (SELECT COUNT(*) FROM sarpras WHERE deleted_at IS NULL) as sarpras_total,
+        (SELECT COUNT(*) FROM spmb) as spmb_total,
+        (SELECT COUNT(*) FROM kegiatan WHERE deleted_at IS NULL) as kegiatan_total,
+        (SELECT COUNT(*) FROM arsip WHERE deleted_at IS NULL) as arsip_total`;
+      args = undefined;
+    }
+
+    const [rows] = await queryAll(sql, args);
+    const r = rows || {};
+
+    function n(v: unknown) { return Number(v) || 0; }
 
     return NextResponse.json({
-      sekolah: sekolah[0] || { total: 0, aktif: 0, negeri: 0, swasta: 0 },
-      siswa: siswa[0] || { total: 0, laki: 0, perempuan: 0 },
-      gtk: gtk[0] || { total: 0, pns: 0 },
-      surat: surat[0] || { total: 0, belum_diproses: 0 },
-      laporan: laporan[0] || { total: 0, selesai: 0 },
-      sarpras: sarpras[0] || { total: 0 },
-      spmb: spmb[0] || { total: 0 },
-      kegiatan: kegiatan[0] || { total: 0 },
-      arsip: arsip[0] || { total: 0 },
+      sekolah: { total: n(r.sekolah_total), aktif: n(r.sekolah_aktif), negeri: n(r.sekolah_negeri), swasta: n(r.sekolah_swasta) },
+      siswa: { total: n(r.siswa_total), laki: n(r.siswa_laki), perempuan: n(r.siswa_perempuan) },
+      gtk: { total: n(r.gtk_total), pns: n(r.gtk_pns) },
+      surat: { total: 0, belum_diproses: n(r.surat_belum_diproses) },
+      laporan: { total: n(r.laporan_total), selesai: n(r.laporan_selesai) },
+      sarpras: { total: n(r.sarpras_total) },
+      spmb: { total: n(r.spmb_total) },
+      kegiatan: { total: n(r.kegiatan_total) },
+      arsip: { total: n(r.arsip_total) },
     });
   } catch {
     return NextResponse.json({
