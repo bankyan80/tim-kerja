@@ -17,6 +17,9 @@ import {
   FileText,
   Image,
   File,
+  ArrowLeft,
+  User,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -151,6 +154,8 @@ export default function ArsipPage() {
   const [filterTahun, setFilterTahun] = useState("");
 
   const [selectedArsip, setSelectedArsip] = useState<ArsipRow | null>(null);
+  const [selectedPegawai, setSelectedPegawai] = useState<string | null>(null);
+  const [pegawaiList, setPegawaiList] = useState<{ nama: string; count: number }[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -206,6 +211,27 @@ export default function ArsipPage() {
       })
       .catch(() => setLoadingPegawai(false));
   }, [form.sekolah_id]);
+
+  const activeSekolahId = isOperator ? userSekolahId : (filterSekolah || null);
+
+  useEffect(() => {
+    if (!activeSekolahId) { setPegawaiList([]); setSelectedPegawai(null); return; }
+    fetch(`/api/gtk?sekolah_id=${activeSekolahId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const names: string[] = d.map((g: any) => g.nama).filter((n: string) => n.trim());
+        const counts: Record<string, number> = {};
+        for (const a of data) {
+          if (a.pemilik) counts[a.pemilik] = (counts[a.pemilik] || 0) + 1;
+        }
+        setPegawaiList(names.map((n) => ({ nama: n, count: counts[n] || 0 })));
+      })
+      .catch(() => setPegawaiList([]));
+  }, [activeSekolahId, data]);
+
+  useEffect(() => {
+    setSelectedPegawai(null);
+  }, [activeSekolahId]);
 
   const filteredData = useMemo(() => {
     if (!filterSearch) return data;
@@ -553,65 +579,46 @@ export default function ArsipPage() {
           <div className="lg:col-span-1">
             <Card>
               <CardContent className="p-0">
-                {selectedArsip ? (
-                  <div className="divide-y divide-gray-100">
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <h3 className="text-sm font-semibold text-gray-800">Detail Arsip</h3>
-                      <button onClick={() => setSelectedArsip(null)} className="p-1 text-gray-400 hover:text-gray-600">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="px-4 py-3 space-y-3 text-sm">
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Jenis Dokumen</span>
-                        <Badge variant={jenisDokumenBadge[selectedArsip.jenis_dokumen] || "default"}>
-                          {selectedArsip.jenis_dokumen}
-                        </Badge>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Sekolah</span>
-                        <span className="text-sm">{selectedArsip.sekolah_nama || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Pemilik</span>
-                        <span className="text-sm">{selectedArsip.pemilik || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Periode</span>
-                        <span className="text-sm">
-                          {selectedArsip.bulan ? getBulanName(selectedArsip.bulan) + " " : ""}
-                          {selectedArsip.tahun}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Nama File</span>
-                        <span className="text-sm text-gray-700 break-all">{selectedArsip.file_name || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Versi</span>
-                        <span className="text-sm">v{selectedArsip.versi}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[11px] font-medium text-gray-500">Tanggal Upload</span>
-                        <span className="text-sm">{formatDate(selectedArsip.tanggal_upload)}</span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 flex gap-2">
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleDownload(selectedArsip)}>
-                        <Download className="w-3.5 h-3.5 mr-1" />
-                        Unduh
-                      </Button>
-                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => openEditModal(selectedArsip)}>
-                        <FileText className="w-3.5 h-3.5 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                    <FilePreview arsipId={selectedArsip.id} />
-                  </div>
+                {selectedArsip && !selectedPegawai ? (
+                  /* Single arsip detail (from table Lihat button, not from pegawai mode) */
+                  <ArsipDetail
+                    arsip={selectedArsip}
+                    onClose={() => setSelectedArsip(null)}
+                    onDownload={handleDownload}
+                    onEdit={openEditModal}
+                  />
+                ) : selectedPegawai ? (
+                  /* Arsip list for selected pegawai */
+                  <PegawaiArsipList
+                    pegawai={selectedPegawai}
+                    arsipList={data.filter((a) => a.pemilik === selectedPegawai)}
+                    sekolahNama={
+                      sekolahOpts.find(
+                        (s) => s.id === (isOperator ? userSekolahId : filterSekolah)
+                      )?.nama || ""
+                    }
+                    onBack={() => setSelectedPegawai(null)}
+                    onView={(a) => setSelectedArsip(a)}
+                    onDownload={handleDownload}
+                    onDelete={(id) => setConfirmDelete(id)}
+                  />
+                ) : activeSekolahId && pegawaiList.length > 0 ? (
+                  /* Pegawai list for selected school */
+                  <PegawaiListPanel
+                    pegawaiList={pegawaiList}
+                    sekolahNama={
+                      sekolahOpts.find((s) => s.id === activeSekolahId)?.nama || ""
+                    }
+                    onSelect={(nama) => { setSelectedPegawai(nama); setSelectedArsip(null); }}
+                  />
                 ) : (
                   <div className="p-6 text-center text-gray-400">
                     <Eye className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Klik tombol Lihat pada baris arsip untuk melihat detail</p>
+                    <p className="text-sm">
+                      {activeSekolahId
+                        ? "Tidak ada pegawai"
+                        : "Pilih sekolah pada filter untuk melihat daftar pegawai"}
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -751,6 +758,180 @@ export default function ArsipPage() {
           <Button variant="danger" onClick={handleDelete}>Hapus</Button>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+/* ───────── Panel Components ───────── */
+
+function ArsipDetail({
+  arsip,
+  onClose,
+  onDownload,
+  onEdit,
+}: {
+  arsip: ArsipRow;
+  onClose: () => void;
+  onDownload: (a: ArsipRow) => void;
+  onEdit: (a: ArsipRow) => void;
+}) {
+  return (
+    <div className="divide-y divide-gray-100">
+      <div className="flex items-center justify-between px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-800">Detail Arsip</h3>
+        <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="px-4 py-3 space-y-3 text-sm">
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Jenis Dokumen</span>
+          <Badge variant={jenisDokumenBadge[arsip.jenis_dokumen] || "default"}>{arsip.jenis_dokumen}</Badge>
+        </div>
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Sekolah</span>
+          <span className="text-sm">{arsip.sekolah_nama || "-"}</span>
+        </div>
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Pemilik</span>
+          <span className="text-sm">{arsip.pemilik || "-"}</span>
+        </div>
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Periode</span>
+          <span className="text-sm">
+            {arsip.bulan ? getBulanName(arsip.bulan) + " " : ""}
+            {arsip.tahun}
+          </span>
+        </div>
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Nama File</span>
+          <span className="text-sm text-gray-700 break-all">{arsip.file_name || "-"}</span>
+        </div>
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Versi</span>
+          <span className="text-sm">v{arsip.versi}</span>
+        </div>
+        <div>
+          <span className="block text-[11px] font-medium text-gray-500">Tanggal Upload</span>
+          <span className="text-sm">{formatDate(arsip.tanggal_upload)}</span>
+        </div>
+      </div>
+      <div className="px-4 py-3 flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1" onClick={() => onDownload(arsip)}>
+          <Download className="w-3.5 h-3.5 mr-1" />
+          Unduh
+        </Button>
+        <Button size="sm" variant="secondary" className="flex-1" onClick={() => onEdit(arsip)}>
+          <FileText className="w-3.5 h-3.5 mr-1" />
+          Edit
+        </Button>
+      </div>
+      <FilePreview arsipId={arsip.id} />
+    </div>
+  );
+}
+
+function PegawaiListPanel({
+  pegawaiList,
+  sekolahNama,
+  onSelect,
+}: {
+  pegawaiList: { nama: string; count: number }[];
+  sekolahNama: string;
+  onSelect: (nama: string) => void;
+}) {
+  return (
+    <div className="divide-y divide-gray-100">
+      <div className="px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-800">Pegawai</h3>
+        <p className="text-[11px] text-gray-500 mt-0.5">{sekolahNama}</p>
+      </div>
+      <div className="max-h-[500px] overflow-y-auto">
+        {pegawaiList.length === 0 ? (
+          <div className="p-6 text-center text-gray-400 text-sm">Tidak ada pegawai</div>
+        ) : (
+          pegawaiList.map((p) => (
+            <button
+              key={p.nama}
+              onClick={() => onSelect(p.nama)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
+            >
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 shrink-0">
+                <User className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">{p.nama}</div>
+                <div className="text-[11px] text-gray-500">{p.count} arsip</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PegawaiArsipList({
+  pegawai,
+  arsipList,
+  sekolahNama,
+  onBack,
+  onView,
+  onDownload,
+  onDelete,
+}: {
+  pegawai: string;
+  arsipList: ArsipRow[];
+  sekolahNama: string;
+  onBack: () => void;
+  onView: (a: ArsipRow) => void;
+  onDownload: (a: ArsipRow) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="divide-y divide-gray-100">
+      <div className="px-4 py-3">
+        <button onClick={onBack} className="flex items-center gap-1 text-xs text-blue-600 hover:underline mb-1">
+          <ArrowLeft className="w-3 h-3" />
+          Kembali
+        </button>
+        <h3 className="text-sm font-semibold text-gray-800 truncate">{pegawai}</h3>
+        <p className="text-[11px] text-gray-500 mt-0.5">
+          {sekolahNama} &middot; {arsipList.length} dokumen
+        </p>
+      </div>
+      <div className="max-h-[500px] overflow-y-auto">
+        {arsipList.length === 0 ? (
+          <div className="p-6 text-center text-gray-400 text-sm">Belum ada arsip</div>
+        ) : (
+          arsipList.map((a) => (
+            <div key={a.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 border-b border-gray-50 last:border-0">
+              <div className="flex items-center justify-center w-7 h-7 rounded bg-gray-100 text-gray-500 shrink-0">
+                <File className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-gray-900 truncate">{a.file_name || a.jenis_dokumen}</div>
+                <div className="text-[10px] text-gray-400">
+                  <Badge variant={jenisDokumenBadge[a.jenis_dokumen] || "default"}>{a.jenis_dokumen}</Badge>
+                  <span className="ml-2">{formatDate(a.tanggal_upload, "dd/MM/yy")}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => onView(a)} className="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Lihat">
+                  <Eye className="w-3 h-3" />
+                </button>
+                <button onClick={() => onDownload(a)} className="p-1 text-green-600 hover:bg-green-100 rounded" title="Unduh">
+                  <Download className="w-3 h-3" />
+                </button>
+                <button onClick={() => onDelete(a.id)} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Hapus">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
