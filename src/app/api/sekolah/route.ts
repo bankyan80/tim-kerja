@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query, queryAll, execute } from "@/lib/db";
+import { query, queryAll, execute, ORDER_SEKOLAH } from "@/lib/db";
 import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       FROM sekolah s WHERE s.deleted_at IS NULL`;
     const args: any[] = [];
     if (status) { sql += " AND s.status_aktif = ?"; args.push(status); }
-    sql += " ORDER BY s.nama";
+    sql += " " + ORDER_SEKOLAH;
     const rows = await queryAll(sql, args);
     return NextResponse.json(rows);
   } catch { return NextResponse.json([], { status: 200 }); }

@@ -14,6 +14,24 @@ export default client;
 
 type QueryArgs = InValue[] | Record<string, InValue>;
 
+export const ORDER_SEKOLAH = `ORDER BY
+  CASE
+    WHEN nama LIKE 'SD%' THEN 1
+    WHEN nama LIKE 'TK%' THEN 2
+    WHEN nama LIKE 'KB%' THEN 3
+    WHEN nama LIKE 'PAUD%' THEN 4
+    ELSE 5
+  END, nama`;
+
+export const ORDER_SEKOLAH_S = `ORDER BY
+  CASE
+    WHEN s.nama LIKE 'SD%' THEN 1
+    WHEN s.nama LIKE 'TK%' THEN 2
+    WHEN s.nama LIKE 'KB%' THEN 3
+    WHEN s.nama LIKE 'PAUD%' THEN 4
+    ELSE 5
+  END, s.nama`;
+
 export async function query(sql: string, args?: QueryArgs) {
   if (!client) {
     console.warn("Database not configured. Set TURSO_DATABASE_URL env var.");

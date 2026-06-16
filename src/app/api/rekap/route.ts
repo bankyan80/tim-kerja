@@ -46,7 +46,14 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
           WHERE siswa.sekolah_id=? AND siswa.deleted_at IS NULL
-          GROUP BY s.nama ORDER BY s.nama`, [sid])
+          GROUP BY s.nama ORDER BY
+          CASE
+            WHEN s.nama LIKE 'SD%' THEN 1
+            WHEN s.nama LIKE 'TK%' THEN 2
+            WHEN s.nama LIKE 'KB%' THEN 3
+            WHEN s.nama LIKE 'PAUD%' THEN 4
+            ELSE 5
+          END, s.nama`, [sid])
         : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
             SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
             SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
@@ -58,7 +65,15 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
           WHERE siswa.deleted_at IS NULL
-          GROUP BY s.nama ORDER BY s.nama`),
+          GROUP BY s.nama
+          ORDER BY
+            CASE
+              WHEN s.nama LIKE 'SD%' THEN 1
+              WHEN s.nama LIKE 'TK%' THEN 2
+              WHEN s.nama LIKE 'KB%' THEN 3
+              WHEN s.nama LIKE 'PAUD%' THEN 4
+              ELSE 5
+            END, s.nama`),
 
       // GTK totals
       queryAll(`SELECT COUNT(*) as total,
@@ -78,7 +93,15 @@ export async function GET() {
           SUM(CASE WHEN LOWER(g.status_pegawai)='pns' THEN 1 ELSE 0 END) as pns,
           SUM(CASE WHEN LOWER(g.status_pegawai)!='pns' THEN 1 ELSE 0 END) as non_pns,
           SUM(CASE WHEN LOWER(g.status_pegawai) LIKE '%honor%' THEN 1 ELSE 0 END) as honorer
-        FROM gtk g JOIN sekolah s ON g.sekolah_id=s.id WHERE g.deleted_at IS NULL GROUP BY s.nama ORDER BY s.nama`),
+        FROM gtk g JOIN sekolah s ON g.sekolah_id=s.id WHERE g.deleted_at IS NULL GROUP BY s.nama
+        ORDER BY
+          CASE
+            WHEN s.nama LIKE 'SD%' THEN 1
+            WHEN s.nama LIKE 'TK%' THEN 2
+            WHEN s.nama LIKE 'KB%' THEN 3
+            WHEN s.nama LIKE 'PAUD%' THEN 4
+            ELSE 5
+          END, s.nama`),
 
       // Mapping pegawai
       sid
@@ -91,7 +114,15 @@ export async function GET() {
           COALESCE((SELECT nama FROM gtk WHERE sekolah_id=s.id AND jenis_gtk='Kepala Sekolah' AND deleted_at IS NULL LIMIT 1), '') as kepala_sekolah,
           (SELECT COUNT(*) FROM gtk WHERE sekolah_id=s.id AND jenis_gtk='Guru' AND deleted_at IS NULL) as guru,
           (SELECT COUNT(*) FROM gtk WHERE sekolah_id=s.id AND jenis_gtk='Tenaga Kependidikan' AND deleted_at IS NULL) as staf
-        FROM sekolah s WHERE s.deleted_at IS NULL ORDER BY s.nama`),
+        FROM sekolah s WHERE s.deleted_at IS NULL
+        ORDER BY
+          CASE
+            WHEN s.nama LIKE 'SD%' THEN 1
+            WHEN s.nama LIKE 'TK%' THEN 2
+            WHEN s.nama LIKE 'KB%' THEN 3
+            WHEN s.nama LIKE 'PAUD%' THEN 4
+            ELSE 5
+          END, s.nama`),
 
       // Laporan bulanan stats
       queryAll(`SELECT
@@ -114,7 +145,15 @@ export async function GET() {
       // SPMB per sekolah
       sid
         ? queryAll("SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id WHERE sp.sekolah_id=?", [sid])
-        : queryAll("SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id ORDER BY s.nama"),
+        : queryAll(`SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id
+        ORDER BY
+          CASE
+            WHEN s.nama LIKE 'SD%' THEN 1
+            WHEN s.nama LIKE 'TK%' THEN 2
+            WHEN s.nama LIKE 'KB%' THEN 3
+            WHEN s.nama LIKE 'PAUD%' THEN 4
+            ELSE 5
+          END, s.nama`),
 
       // Surat totals
       queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis='masuk' THEN 1 ELSE 0 END) as masuk, SUM(CASE WHEN jenis='keluar' THEN 1 ELSE 0 END) as keluar FROM surat WHERE deleted_at IS NULL"),
