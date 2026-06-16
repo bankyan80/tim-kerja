@@ -10,7 +10,7 @@ export async function GET() {
     const wh = sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL";
     const args = sid ? [sid] : [];
 
-    const [sekolah, siswaKelas, siswaGender, siswaPerSekolah, gtkTotals, gtkPerSekolah, mapPegawai,
+    const [sekolah, siswaKelasSD, siswaKelasTK, siswaGender, siswaPerSekolahSD, siswaPerSekolahTK, gtkTotals, gtkPerSekolah, mapPegawai,
       laporanStats, sarprasTotals, sarprasJenis, spmbTotals, spmbSekolah, suratTotals,
       suratBulan, progresData] = await Promise.all([
       // Sekolah
@@ -27,13 +27,20 @@ export async function GET() {
           SUM(CASE WHEN akreditasi='Belum' OR akreditasi='' THEN 1 ELSE 0 END) as belum_akreditasi
         FROM sekolah WHERE deleted_at IS NULL`),
 
-      // Siswa per kelas
-      queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa" + wh + " GROUP BY kelas ORDER BY kelas", args),
+      // Siswa per kelas - SD
+      sid
+        ? queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE siswa.sekolah_id=? AND s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas", [sid])
+        : queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas"),
+
+      // Siswa per kelas - TK/KB
+      sid
+        ? queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE siswa.sekolah_id=? AND s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas", [sid])
+        : queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas"),
 
       // Siswa gender
       queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis_kelamin='L' THEN 1 ELSE 0 END) as laki, SUM(CASE WHEN jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan FROM siswa" + wh, args),
 
-      // Siswa per sekolah (with class & gender breakdown)
+      // Siswa per sekolah SD (kelas I-VI)
       sid
         ? queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
             SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
@@ -45,15 +52,8 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='V' THEN 1 ELSE 0 END) as kelas_v,
             SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
-          WHERE siswa.sekolah_id=? AND siswa.deleted_at IS NULL
-          GROUP BY s.nama ORDER BY
-          CASE
-            WHEN s.nama LIKE 'SD%' THEN 1
-            WHEN s.nama LIKE 'TK%' THEN 2
-            WHEN s.nama LIKE 'KB%' THEN 3
-            WHEN s.nama LIKE 'PAUD%' THEN 4
-            ELSE 5
-          END, s.nama`, [sid])
+          WHERE siswa.sekolah_id=? AND s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL
+          GROUP BY s.nama ORDER BY s.nama`, [sid])
         : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
             SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
             SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
@@ -64,15 +64,35 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='V' THEN 1 ELSE 0 END) as kelas_v,
             SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
-          WHERE siswa.deleted_at IS NULL
+          WHERE s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL
+          GROUP BY s.nama ORDER BY s.nama`),
+
+      // Siswa per sekolah TK/KB (kelas A, B, C)
+      sid
+        ? queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
+            SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
+            SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
+            SUM(CASE WHEN siswa.kelas='I' THEN 1 ELSE 0 END) as kelas_a,
+            SUM(CASE WHEN siswa.kelas='II' THEN 1 ELSE 0 END) as kelas_b,
+            SUM(CASE WHEN siswa.kelas='III' THEN 1 ELSE 0 END) as kelas_c
+          FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
+          WHERE siswa.sekolah_id=? AND s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL
+          GROUP BY s.nama ORDER BY s.nama`, [sid])
+        : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
+            SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
+            SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
+            SUM(CASE WHEN siswa.kelas='I' THEN 1 ELSE 0 END) as kelas_a,
+            SUM(CASE WHEN siswa.kelas='II' THEN 1 ELSE 0 END) as kelas_b,
+            SUM(CASE WHEN siswa.kelas='III' THEN 1 ELSE 0 END) as kelas_c
+          FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
+          WHERE s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL
           GROUP BY s.nama
           ORDER BY
             CASE
-              WHEN s.nama LIKE 'SD%' THEN 1
-              WHEN s.nama LIKE 'TK%' THEN 2
-              WHEN s.nama LIKE 'KB%' THEN 3
-              WHEN s.nama LIKE 'PAUD%' THEN 4
-              ELSE 5
+              WHEN s.nama LIKE 'TK%' THEN 1
+              WHEN s.nama LIKE 'KB%' THEN 2
+              WHEN s.nama LIKE 'PAUD%' THEN 3
+              ELSE 4
             END, s.nama`),
 
       // GTK totals
@@ -225,8 +245,9 @@ export async function GET() {
         total: p(sg.total),
         laki: p(sg.laki),
         perempuan: p(sg.perempuan),
-        perKelas: siswaKelas.map((r: Record<string, unknown>) => ({ kelas: String(r.kelas || ""), jumlah: p(r.jumlah) })),
-        perSekolah: siswaPerSekolah.map((r: Record<string, unknown>) => ({
+        perKelasSD: siswaKelasSD.map((r: Record<string, unknown>) => ({ kelas: String(r.kelas || ""), jumlah: p(r.jumlah) })),
+        perKelasTK: siswaKelasTK.map((r: Record<string, unknown>) => ({ kelas: String(r.kelas || ""), jumlah: p(r.jumlah) })),
+        perSekolahSD: siswaPerSekolahSD.map((r: Record<string, unknown>) => ({
           sekolah: String(r.sekolah || ""),
           total: p(r.total),
           laki: p(r.laki),
@@ -237,6 +258,15 @@ export async function GET() {
           kelas_iv: p(r.kelas_iv),
           kelas_v: p(r.kelas_v),
           kelas_vi: p(r.kelas_vi),
+        })),
+        perSekolahTK: siswaPerSekolahTK.map((r: Record<string, unknown>) => ({
+          sekolah: String(r.sekolah || ""),
+          total: p(r.total),
+          laki: p(r.laki),
+          perempuan: p(r.perempuan),
+          kelas_a: p(r.kelas_a),
+          kelas_b: p(r.kelas_b),
+          kelas_c: p(r.kelas_c),
         })),
       },
       dataGTK: {
@@ -309,7 +339,7 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       dataSekolah: [] as { label: string; value: number; variant: string }[],
-      dataSiswa: { total: 0, laki: 0, perempuan: 0, perKelas: [] as { kelas: string; jumlah: number }[] },
+      dataSiswa: { total: 0, laki: 0, perempuan: 0, perKelasSD: [] as { kelas: string; jumlah: number }[], perKelasTK: [] as { kelas: string; jumlah: number }[], perSekolahSD: [] as { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[], perSekolahTK: [] as { sekolah: string; total: number; laki: number; perempuan: number; kelas_a: number; kelas_b: number; kelas_c: number }[] },
       dataGTK: { total: 0, pns: 0, nonPns: 0, honorer: 0, perSekolah: [] as { sekolah: string; total: number; pns: number; nonPns: number; honorer: number }[] },
       mappingPegawai: [] as { sekolah: string; kepala_sekolah: string; guru: number; staf: number; operator: string }[],
       laporanBulanan: { sekolahNama: [] as string[], stats: {} },

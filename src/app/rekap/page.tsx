@@ -36,7 +36,7 @@ const tahunPelajaranOptions = [
 
 type RekapData = {
   dataSekolah: { label: string; value: number; variant: string }[];
-  dataSiswa: { total: number; laki: number; perempuan: number; perKelas: { kelas: string; jumlah: number }[]; perSekolah: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[] };
+  dataSiswa: { total: number; laki: number; perempuan: number; perKelasSD: { kelas: string; jumlah: number }[]; perKelasTK: { kelas: string; jumlah: number }[]; perSekolahSD: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[]; perSekolahTK: { sekolah: string; total: number; laki: number; perempuan: number; kelas_a: number; kelas_b: number; kelas_c: number }[] };
   dataGTK: { total: number; pns: number; nonPns: number; honorer: number; perSekolah: { sekolah: string; total: number; pns: number; nonPns: number; honorer: number }[] };
   mappingPegawai: { sekolah: string; kepala_sekolah: string; guru: number; staf: number; operator: string }[];
   laporanBulanan: { sekolahNama: string[]; stats: Record<string, unknown> };
@@ -214,7 +214,7 @@ function DataSekolahTab({ data }: { data?: { label: string; value: number; varia
   );
 }
 
-function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempuan: number; perKelas: { kelas: string; jumlah: number }[]; perSekolah: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[] } }) {
+function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempuan: number; perKelasSD: { kelas: string; jumlah: number }[]; perKelasTK: { kelas: string; jumlah: number }[]; perSekolahSD: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[]; perSekolahTK: { sekolah: string; total: number; laki: number; perempuan: number; kelas_a: number; kelas_b: number; kelas_c: number }[] } }) {
   if (!data) return <EmptyState title="Belum ada data siswa" />;
   return (
     <div className="space-y-6">
@@ -223,19 +223,21 @@ function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempua
         <StatCard label="Laki-laki" value={data.laki} variant="info" />
         <StatCard label="Perempuan" value={data.perempuan} variant="info" />
       </div>
-      {data.perKelas?.length > 0 && (
+
+      {data.perKelasSD?.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Jumlah Siswa per Kelas</h4>
-          <TabTable headers={["Kelas", "Jumlah"]} rows={data.perKelas.map((k) => [k.kelas, k.jumlah])} />
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Jumlah Siswa SD per Kelas</h4>
+          <TabTable headers={["Kelas", "Jumlah"]} rows={data.perKelasSD.map((k) => [k.kelas, k.jumlah])} />
         </div>
       )}
-      {data.perSekolah?.length > 0 && (
+
+      {data.perSekolahSD?.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Rekapitulasi per Sekolah</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Rekapitulasi Siswa SD per Sekolah</h4>
           <div className="overflow-x-auto">
             <TabTable
               headers={["Sekolah", "Total", "L", "P", "Kls I", "Kls II", "Kls III", "Kls IV", "Kls V", "Kls VI"]}
-              rows={data.perSekolah.map((s) => [
+              rows={data.perSekolahSD.map((s) => [
                 s.sekolah,
                 s.total,
                 s.laki,
@@ -246,6 +248,35 @@ function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempua
                 s.kelas_iv,
                 s.kelas_v,
                 s.kelas_vi,
+              ])}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-gray-200 my-4" />
+
+      {data.perKelasTK?.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Jumlah Siswa TK/KB/PAUD per Kelas</h4>
+          <TabTable headers={["Kelas", "Jumlah"]} rows={data.perKelasTK.map((k) => [k.kelas, k.jumlah])} />
+        </div>
+      )}
+
+      {data.perSekolahTK?.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Rekapitulasi Siswa TK/KB/PAUD per Sekolah</h4>
+          <div className="overflow-x-auto">
+            <TabTable
+              headers={["Sekolah", "Total", "L", "P", "Kls A", "Kls B", "Kls C"]}
+              rows={data.perSekolahTK.map((s) => [
+                s.sekolah,
+                s.total,
+                s.laki,
+                s.perempuan,
+                s.kelas_a,
+                s.kelas_b,
+                s.kelas_c,
               ])}
             />
           </div>
