@@ -209,17 +209,19 @@ export default function DataGTKPage() {
   }, [data]);
 
   const analisisGuru = useMemo(() => {
-    const perSekolah: Record<string, { total: number; pns: number; pppk: number; honorer: number }> = {};
+    const perSekolah: Record<string, { total: number; pns: number; pppk: number; honorer: number; lainnya: number }> = {};
     for (const s of sekolahList) {
-      perSekolah[s.id] = { total: 0, pns: 0, pppk: 0, honorer: 0 };
+      perSekolah[s.id] = { total: 0, pns: 0, pppk: 0, honorer: 0, lainnya: 0 };
     }
     for (const g of data) {
       if (g.status_aktif !== "aktif") continue;
       if (!perSekolah[g.sekolah_id]) continue;
       perSekolah[g.sekolah_id].total++;
-      if (g.status_pegawai === "PNS") perSekolah[g.sekolah_id].pns++;
-      else if (g.status_pegawai === "PPPK" || g.status_pegawai === "PPPK Paruh Waktu") perSekolah[g.sekolah_id].pppk++;
-      else if (["Honorer", "GTT", "GTY"].includes(g.status_pegawai)) perSekolah[g.sekolah_id].honorer++;
+      const sp = g.status_pegawai;
+      if (sp === "PNS") perSekolah[g.sekolah_id].pns++;
+      else if (sp === "PPPK" || sp === "PPPK Paruh Waktu") perSekolah[g.sekolah_id].pppk++;
+      else if (sp.toLowerCase().includes("honor")) perSekolah[g.sekolah_id].honorer++;
+      else perSekolah[g.sekolah_id].lainnya++;
     }
     return perSekolah;
   }, [data, sekolahList]);
@@ -552,6 +554,7 @@ export default function DataGTKPage() {
                         <span>PNS: <strong>{analisis.pns}</strong></span>
                         <span>PPPK: <strong>{analisis.pppk}</strong></span>
                         <span>Honorer: <strong>{analisis.honorer}</strong></span>
+                        {analisis.lainnya > 0 && <span>Lainnya: <strong>{analisis.lainnya}</strong></span>}
                       </div>
                     </div>
                   );
