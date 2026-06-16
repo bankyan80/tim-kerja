@@ -13,7 +13,7 @@ export async function GET() {
 
     const [sekolah, siswaKelas, siswaGender, gtkTotals, gtkPerSekolah, mapPegawai,
       laporanStats, sarprasTotals, sarprasJenis, spmbTotals, spmbSekolah, suratTotals,
-      suratBulan, kegiatanTotals, progresData] = await Promise.all([
+      suratBulan, progresData] = await Promise.all([
       // Sekolah
       sid
         ? queryAll("SELECT COUNT(*) as total, 1 as aktif, SUM(CASE WHEN status='negeri' THEN 1 ELSE 0 END) as negeri, SUM(CASE WHEN status='swasta' THEN 1 ELSE 0 END) as swasta, 0 as nonaktif, 0 as akreditasi_a, 0 as akreditasi_b, 0 as belum_akreditasi FROM sekolah WHERE id = ? AND deleted_at IS NULL", [sid])
@@ -106,9 +106,6 @@ export async function GET() {
       FROM surat WHERE deleted_at IS NULL AND tanggal_surat IS NOT NULL
       GROUP BY strftime('%m', tanggal_surat) ORDER BY strftime('%m', tanggal_surat)`),
 
-      // Kegiatan totals
-      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN tanggal <= date('now') THEN 1 ELSE 0 END) as terlaksana, SUM(CASE WHEN tanggal > date('now') THEN 1 ELSE 0 END) as belum FROM kegiatan WHERE deleted_at IS NULL"),
-
       // Progres data - count records per module
       queryAll(`SELECT
         (SELECT COUNT(*) FROM sekolah WHERE deleted_at IS NULL) as sekolah_count,
@@ -119,7 +116,6 @@ export async function GET() {
         (SELECT COUNT(*) FROM sarpras ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as sarpras_count,
         (SELECT COUNT(*) FROM spmb ${sid ? "WHERE sekolah_id = ? AND " : ""} 1=1) as spmb_count,
         (SELECT COUNT(*) FROM surat WHERE deleted_at IS NULL) as surat_count,
-        (SELECT COUNT(*) FROM kegiatan WHERE deleted_at IS NULL) as kegiatan_count,
         (SELECT COUNT(*) FROM arsip ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as arsip_count
       `, sid ? [sid, sid, sid, sid, sid, sid] : []),
     ]);
@@ -135,7 +131,6 @@ export async function GET() {
     const st = sarprasTotals[0] || {};
     const spt = spmbTotals[0] || {};
     const sut = suratTotals[0] || {};
-    const kt = kegiatanTotals[0] || {};
     const pd = progresData[0] || {};
 
     const progresKategori = [
@@ -146,7 +141,6 @@ export async function GET() {
       { kategori: "Sarpras", count: p(pd.sarpras_count), persentase: p(pd.sarpras_count) > 0 ? 90 : 0 },
       { kategori: "SPMB", count: p(pd.spmb_count), persentase: p(pd.spmb_count) > 0 ? 100 : 0 },
       { kategori: "Surat", count: p(pd.surat_count), persentase: p(pd.surat_count) > 0 ? 100 : 0 },
-      { kategori: "Kegiatan", count: p(pd.kegiatan_count), persentase: p(pd.kegiatan_count) > 0 ? 88 : 0 },
     ];
 
     const sekolahNamaList = mapPegawai.map((r: Record<string, unknown>) => String(r.sekolah || ""));
@@ -230,11 +224,6 @@ export async function GET() {
           keluar: p(r.keluar),
         })),
       },
-      kegiatan: {
-        total: p(kt.total),
-        terlaksana: p(kt.terlaksana),
-        belum: p(kt.belum),
-      },
       progresData: progresKategori.map((p) => ({
         ...p,
         status: (p.persentase >= 100 ? "lengkap" : p.persentase >= 80 ? "hampir" : "kurang") as "lengkap" | "hampir" | "kurang",
@@ -251,7 +240,6 @@ export async function GET() {
       sarpras: { totalRuang: 0, totalUnit: 0, kondisiBaik: 0, kondisiSedang: 0, kondisiRusak: 0, perJenis: [] as { jenis: string; jumlah: number; baik: number; sedang: number; rusak: number }[] },
       spmb: { totalPendaftar: 0, diterima: 0, cadangan: 0, mengundurkanDiri: 0, perSekolah: [] as { sekolah: string; pendaftar: number; diterima: number; cadangan: number; mengundur: number }[] },
       surat: { total: 0, masuk: 0, keluar: 0, disposisi: 0, perBulan: [] as { bulan: string; masuk: number; keluar: number }[] },
-      kegiatan: { total: 0, terlaksana: 0, belum: 0 },
       progresData: [] as { kategori: string; persentase: number; status: string }[],
     });
   }

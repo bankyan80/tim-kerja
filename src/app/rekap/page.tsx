@@ -23,7 +23,6 @@ const tabs = [
   "Sarpras",
   "SPMB",
   "Surat",
-  "Kegiatan",
   "Progres Pengumpulan Data",
 ] as const;
 
@@ -44,7 +43,6 @@ type RekapData = {
   sarpras: { totalRuang: number; totalUnit: number; kondisiBaik: number; kondisiSedang: number; kondisiRusak: number; perJenis: { jenis: string; jumlah: number; baik: number; sedang: number; rusak: number }[] };
   spmb: { totalPendaftar: number; diterima: number; cadangan: number; mengundurkanDiri: number; perSekolah: { sekolah: string; pendaftar: number; diterima: number; cadangan: number; mengundur: number }[] };
   surat: { total: number; masuk: number; keluar: number; disposisi: number; perBulan: { bulan: string; masuk: number; keluar: number }[] };
-  kegiatan: { total: number; terlaksana: number; belum: number };
   progresData: { kategori: string; count: number; persentase: number; status: string }[];
 };
 
@@ -163,7 +161,6 @@ export default function RekapPage() {
             {activeTab === "Sarpras" && <SarprasTab data={data?.sarpras} />}
             {activeTab === "SPMB" && <SPMBTab data={data?.spmb} />}
             {activeTab === "Surat" && <SuratTab data={data?.surat} />}
-            {activeTab === "Kegiatan" && <KegiatanTab data={data?.kegiatan} />}
             {activeTab === "Progres Pengumpulan Data" && <ProgresTab data={data?.progresData} />}
           </CardContent>
         </Card>
@@ -352,19 +349,6 @@ function SuratTab({ data }: { data?: { total: number; masuk: number; keluar: num
           />
         </div>
       )}
-    </div>
-  );
-}
-
-function KegiatanTab({ data }: { data?: { total: number; terlaksana: number; belum: number } }) {
-  if (!data) return <EmptyState title="Belum ada data kegiatan" />;
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard label="Total Kegiatan" value={data.total} variant="info" />
-        <StatCard label="Terlaksana" value={data.terlaksana} variant="success" />
-        <StatCard label="Belum Terlaksana" value={data.belum} variant="danger" />
-      </div>
     </div>
   );
 }

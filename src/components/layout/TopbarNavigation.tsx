@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Search, Bell, User, ChevronDown, LogOut, Settings, MoreHorizontal, LayoutDashboard, Mail, School, Users, GraduationCap, FileText, Building2, ClipboardList, Calendar, Archive, BarChart3 } from "lucide-react";
+import { Search, Bell, User, ChevronDown, LogOut, Settings, MoreHorizontal, LayoutDashboard, Mail, School, Users, GraduationCap, FileText, Building2, ClipboardList, Archive, BarChart3 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,6 @@ const menuItems = [
   { label: "Laporan", href: "/laporan", icon: FileText },
   { label: "Sarpras", href: "/sarpras", icon: Building2 },
   { label: "SPMB", href: "/spmb", icon: ClipboardList },
-  { label: "Kegiatan", href: "/kegiatan", icon: Calendar },
 ];
 
 const extraItems = [

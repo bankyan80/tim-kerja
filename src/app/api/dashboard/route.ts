@@ -26,9 +26,8 @@ export async function GET(req: NextRequest) {
         (SELECT COUNT(*) FROM laporan_bulanan WHERE sekolah_id = ? AND status = 'terverifikasi' AND deleted_at IS NULL) as laporan_selesai,
         (SELECT COUNT(*) FROM sarpras WHERE sekolah_id = ? AND deleted_at IS NULL) as sarpras_total,
         (SELECT COUNT(*) FROM spmb WHERE sekolah_id = ?) as spmb_total,
-        (SELECT COUNT(*) FROM kegiatan WHERE deleted_at IS NULL) as kegiatan_total,
         (SELECT COUNT(*) FROM arsip WHERE sekolah_id = ? AND deleted_at IS NULL) as arsip_total`;
-      args = [sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid];
+      args = [sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid];
     } else {
       sql = `SELECT
         (SELECT COUNT(*) FROM sekolah WHERE deleted_at IS NULL) as sekolah_total,
@@ -45,7 +44,6 @@ export async function GET(req: NextRequest) {
         (SELECT COUNT(*) FROM laporan_bulanan WHERE status = 'terverifikasi' AND deleted_at IS NULL) as laporan_selesai,
         (SELECT COUNT(*) FROM sarpras WHERE deleted_at IS NULL) as sarpras_total,
         (SELECT COUNT(*) FROM spmb) as spmb_total,
-        (SELECT COUNT(*) FROM kegiatan WHERE deleted_at IS NULL) as kegiatan_total,
         (SELECT COUNT(*) FROM arsip WHERE deleted_at IS NULL) as arsip_total`;
       args = undefined;
     }
@@ -63,7 +61,6 @@ export async function GET(req: NextRequest) {
       laporan: { total: n(r.laporan_total), selesai: n(r.laporan_selesai) },
       sarpras: { total: n(r.sarpras_total) },
       spmb: { total: n(r.spmb_total) },
-      kegiatan: { total: n(r.kegiatan_total) },
       arsip: { total: n(r.arsip_total) },
     });
   } catch {
@@ -75,7 +72,6 @@ export async function GET(req: NextRequest) {
       laporan: { total: 0, selesai: 0 },
       sarpras: { total: 0 },
       spmb: { total: 0 },
-      kegiatan: { total: 0 },
       arsip: { total: 0 },
     }, { status: 200 });
   }

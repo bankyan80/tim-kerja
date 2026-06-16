@@ -10,7 +10,6 @@ import {
   GraduationCap,
   Mail,
   FileText,
-  Calendar,
   AlertCircle,
   ChevronRight,
 } from "lucide-react";
@@ -25,19 +24,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [suratMasuk, setSuratMasuk] = useState<any[]>([]);
-  const [kegiatan, setKegiatan] = useState<any[]>([]);
 
   useEffect(() => {
     async function load() {
       try {
-        const [statsRes, suratRes, kegiatanRes] = await Promise.all([
+        const [statsRes, suratRes] = await Promise.all([
           fetch("/api/dashboard").then(r => r.json()),
           fetch("/api/surat?jenis=masuk&status=draft,dikirim,diproses").then(r => r.json()),
-          fetch("/api/kegiatan").then(r => r.json()),
         ]);
         setStats(statsRes);
         setSuratMasuk(Array.isArray(suratRes) ? suratRes.slice(0, 3) : []);
-        setKegiatan(Array.isArray(kegiatanRes) ? kegiatanRes.slice(0, 3) : []);
       } catch {}
       setLoading(false);
     }
@@ -231,46 +227,6 @@ export default function DashboardPage() {
               <ChevronRight className="w-4 h-4" />
             </Link>
           </Card>
-
-          {/* Agenda Terdekat */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-500" />
-                Agenda Terdekat
-              </CardTitle>
-            </CardHeader>
-            {kegiatan.length === 0 ? (
-              <EmptyState title="Tidak ada agenda" message="Belum ada agenda terdekat." />
-            ) : (
-              <ul className="space-y-3">
-                {kegiatan.map((agenda: any) => (
-                  <li key={agenda.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                    <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 shrink-0">
-                      <span className="text-[10px] leading-tight font-bold uppercase">
-                        {formatDate(agenda.tanggal, "MMM")}
-                      </span>
-                      <span className="text-sm leading-tight font-bold">
-                        {formatDate(agenda.tanggal, "dd")}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800">{agenda.nama}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{agenda.waktu}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link
-              href="/kegiatan"
-              className="mt-4 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Lihat semua
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </Card>
-
         </div>
       </div>
     </div>

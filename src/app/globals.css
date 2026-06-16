@@ -35,3 +35,50 @@ body {
     display: block !important;
   }
 }
+
+/* Login page - Batik Mega Mendung */
+.login-page {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 28%, transparent 48%),
+    linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #1e40af 100%);
+}
+
+.login-page::before,
+.login-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-repeat: repeat;
+  background-size: 360px 180px;
+  opacity: 0.18;
+  z-index: 0;
+}
+
+.login-page::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='360' height='180' viewBox='0 0 360 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.55)' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M20 120 C55 65 115 65 150 120 C185 65 245 65 280 120 C305 85 335 85 355 120'/%3E%3Cpath d='M35 132 C65 88 108 88 138 132 C168 88 212 88 242 132 C266 102 318 102 342 132'/%3E%3Cpath d='M55 145 C82 112 116 112 143 145 C170 112 204 112 231 145 C255 120 304 120 328 145'/%3E%3Cpath d='M70 72 C100 30 145 30 175 72 C205 30 250 30 280 72 C300 50 332 50 350 72'/%3E%3Cpath d='M88 85 C112 58 144 58 168 85 C192 58 224 58 248 85 C270 68 318 68 338 85'/%3E%3C/g%3E%3C/svg%3E");
+  transform: translateX(-80px) translateY(20px);
+}
+
+.login-page::after {
+  background-image: url("data:image/svg+xml,%3Csvg width='420' height='210' viewBox='0 0 420 210' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='rgba(147,197,253,0.65)' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M15 150 C55 78 130 78 170 150 C210 78 285 78 325 150 C350 112 390 112 415 150'/%3E%3Cpath d='M35 165 C70 112 125 112 160 165 C195 112 250 112 285 165 C315 132 375 132 400 165'/%3E%3Cpath d='M70 180 C98 145 138 145 166 180 C194 145 234 145 262 180 C292 154 350 154 382 180'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 420px 210px;
+  opacity: 0.12;
+  transform: translateX(120px) translateY(80px);
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: min(384px, 90vw);
+  padding: 40px 32px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
+}

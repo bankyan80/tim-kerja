@@ -7,7 +7,6 @@ import {
   BarChart3,
   Building2,
   ClipboardList,
-  Calendar,
   Settings,
   FileText,
   Grid3X3,
@@ -39,12 +38,6 @@ const modules = [
     description: "Seleksi penerimaan murid baru",
     icon: ClipboardList,
     href: "/spmb",
-  },
-  {
-    name: "Kegiatan",
-    description: "Agenda dan kegiatan",
-    icon: Calendar,
-    href: "/kegiatan",
   },
   {
     name: "Pengaturan",
