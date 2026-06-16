@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar TEXT,
   role TEXT NOT NULL DEFAULT 'staf' CHECK(role IN ('ketua','admin','staf','operator_sekolah')),
   status TEXT NOT NULL DEFAULT 'aktif' CHECK(status IN ('aktif','nonaktif')),
+  sekolah_id TEXT REFERENCES sekolah(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -176,6 +177,7 @@ CREATE TABLE IF NOT EXISTS spmb (
   jalur_domisili INTEGER DEFAULT 0,
   jalur_afirmasi INTEGER DEFAULT 0,
   jalur_mutasi INTEGER DEFAULT 0,
+  jenis_kelamin TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(sekolah_id, tahun_pelajaran)
@@ -295,6 +297,9 @@ CREATE INDEX IF NOT EXISTS idx_arsip_jenis ON arsip(jenis_dokumen);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifikasi_user ON notifikasi(user_id);
 CREATE INDEX IF NOT EXISTS idx_monitoring_sekolah ON monitoring(sekolah_id);
+CREATE INDEX IF NOT EXISTS idx_sarpras_sekolah ON sarpras(sekolah_id);
+CREATE INDEX IF NOT EXISTS idx_spmb_sekolah ON spmb(sekolah_id);
+CREATE INDEX IF NOT EXISTS idx_arsip_sekolah ON arsip(sekolah_id);
 
 -- App Settings
 CREATE TABLE IF NOT EXISTS app_settings (

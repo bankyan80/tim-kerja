@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryAll, execute } from "@/lib/db";
+import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +18,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const { nomor_agenda, nomor_surat, tanggal_surat, tanggal_diterima, asal_surat, tujuan, perihal, klasifikasi, jenis, file, disposisi, penerima_disposisi, batas_tindak_lanjut, penandatangan, isi_surat, lampiran, file_final, status_pengiriman, tanggal_kirim, status, catatan } = b;
@@ -26,6 +29,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const { id, ...fields } = b;
@@ -40,6 +45,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

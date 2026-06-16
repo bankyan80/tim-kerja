@@ -161,18 +161,20 @@ export default function LaporanBulananPage() {
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   useEffect(() => {
+    loadData();
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama, npsn: s.npsn || "", alamat: s.alamat || "", kepala_sekolah: s.kepala_sekolah || "" })))).catch(() => {});
+  }, [isOperator, userSekolahId]);
+
+  async function loadData() {
     const params = new URLSearchParams();
     if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
     const url = `/api/laporan${params.toString() ? "?" + params.toString() : ""}`;
-    fetch(url)
-      .then((r) => r.json())
-      .then((d) => {
-        setData(d);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama, npsn: s.npsn || "", alamat: s.alamat || "", kepala_sekolah: s.kepala_sekolah || "" })))).catch(() => {});
-  }, [isOperator, userSekolahId]);
+    try {
+      const d = await fetch(url).then(r => r.json());
+      setData(d);
+    } catch {}
+    setLoading(false);
+  }
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<LaporanBulanan>(defaultForm);
@@ -341,26 +343,23 @@ export default function LaporanBulananPage() {
 
   async function handleSave() {
     try {
-      const payload = { ...form, data: JSON.stringify(form) };
+      const payload = { ...form };
       if (editingId) {
-        const res = await fetch("/api/laporan", {
+        await fetch("/api/laporan", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const updated = await res.json();
-        setData((prev) => prev.map((l) => (l.id === editingId ? updated : l)));
         toast.success("Laporan berhasil diperbarui");
       } else {
-        const res = await fetch("/api/laporan", {
+        await fetch("/api/laporan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        const created = await res.json();
-        setData((prev) => [...prev, created]);
         toast.success("Laporan berhasil dibuat");
       }
+      loadData();
     } catch {
       toast.error("Gagal menyimpan laporan");
     }

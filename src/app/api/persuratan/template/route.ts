@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryAll, execute } from "@/lib/db";
 import type { ResultSet } from "@libsql/client";
+import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,6 +25,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
     const { nama, jenis, deskripsi, isi_template, status } = body;
@@ -45,6 +48,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
     const { id, nama, jenis, deskripsi, isi_template, status } = body;
@@ -65,6 +70,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

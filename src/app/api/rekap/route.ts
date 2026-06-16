@@ -8,7 +8,6 @@ export async function GET() {
     const sid = forcedSekolah;
 
     const wh = sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL";
-    const whs = sid ? " WHERE s.sekolah_id = ?" : " WHERE s.deleted_at IS NULL";
     const args = sid ? [sid] : [];
 
     const [sekolah, siswaKelas, siswaGender, gtkTotals, gtkPerSekolah, mapPegawai,
@@ -74,13 +73,13 @@ export async function GET() {
         SUM(CASE WHEN status='draft' THEN 1 ELSE 0 END) as draft,
         SUM(CASE WHEN status='dikirim' THEN 1 ELSE 0 END) as dikirim,
         SUM(CASE WHEN status='perlu_perbaikan' THEN 1 ELSE 0 END) as perlu_perbaikan
-      FROM laporan_bulanan` + (sid ? " WHERE sekolah_id = ?" : " WHERE deleted_at IS NULL"), args),
+      FROM laporan_bulanan` + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL"), args),
 
       // Sarpras totals
-      queryAll("SELECT COUNT(*) as total, SUM(jumlah) as total_unit, SUM(kondisi_baik) as kondisi_baik, SUM(kondisi_sedang) as kondisi_sedang, SUM(kondisi_rusak) as kondisi_rusak FROM sarpras" + whs, args),
+      queryAll("SELECT COUNT(*) as total, SUM(jumlah) as total_unit, SUM(kondisi_baik) as kondisi_baik, SUM(kondisi_sedang) as kondisi_sedang, SUM(kondisi_rusak) as kondisi_rusak FROM sarpras" + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL"), args),
 
       // Sarpras per jenis
-      queryAll("SELECT jenis, SUM(jumlah) as jumlah, SUM(kondisi_baik) as baik, SUM(kondisi_sedang) as sedang, SUM(kondisi_rusak) as rusak FROM sarpras" + whs + " GROUP BY jenis ORDER BY jenis", args),
+      queryAll("SELECT jenis, SUM(jumlah) as jumlah, SUM(kondisi_baik) as baik, SUM(kondisi_sedang) as sedang, SUM(kondisi_rusak) as rusak FROM sarpras" + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL") + " GROUP BY jenis ORDER BY jenis", args),
 
       // SPMB totals
       queryAll("SELECT COUNT(*) as total_pendaftar, SUM(pendaftar) as pendaftar, SUM(diterima) as diterima FROM spmb" + (sid ? " WHERE sekolah_id = ?" : ""), sid ? [sid] : []),
@@ -229,8 +228,7 @@ export async function GET() {
         status: (p.persentase >= 100 ? "lengkap" : p.persentase >= 80 ? "hampir" : "kurang") as "lengkap" | "hampir" | "kurang",
       })),
     });
-  } catch (error) {
-    console.error("Rekap API error:", error);
+  } catch {
     return NextResponse.json({
       dataSekolah: [] as { label: string; value: number; variant: string }[],
       dataSiswa: { total: 0, laki: 0, perempuan: 0, perKelas: [] as { kelas: string; jumlah: number }[] },

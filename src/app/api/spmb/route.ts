@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryAll, execute } from "@/lib/db";
 import { getSekolahFilter } from "@/lib/auth-utils";
+import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,33 +20,40 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const { sekolah_id, tahun_pelajaran, daya_tampung, pendaftar, diterima, jalur_domisili, jalur_afirmasi, jalur_mutasi, jenis_kelamin } = b;
     await execute(`INSERT INTO spmb (sekolah_id, tahun_pelajaran, daya_tampung, pendaftar, diterima, jalur_domisili, jalur_afirmasi, jalur_mutasi, jenis_kelamin) VALUES (?,?,?,?,?,?,?,?,?)`, [sekolah_id, tahun_pelajaran, daya_tampung||0, pendaftar||0, diterima||0, jalur_domisili||0, jalur_afirmasi||0, jalur_mutasi||0, jenis_kelamin||null]);
     return NextResponse.json({ ok: true });
-  } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
+  } catch { return NextResponse.json({ error: "Gagal menyimpan data" }, { status: 500 }); }
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const { id, ...fields } = b;
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
     const setClauses: string[] = []; const args: any[] = [];
     for (const [k, v] of Object.entries(fields)) { setClauses.push(`${k} = ?`); args.push(v); }
+    setClauses.push("updated_at = datetime('now')");
     args.push(id);
     await execute(`UPDATE spmb SET ${setClauses.join(", ")} WHERE id = ?`, args);
     return NextResponse.json({ ok: true });
-  } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
+  } catch { return NextResponse.json({ error: "Gagal mengupdate data" }, { status: 500 }); }
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
     await execute("DELETE FROM spmb WHERE id = ?", [id]);
     return NextResponse.json({ ok: true });
-  } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
+  } catch { return NextResponse.json({ error: "Gagal menghapus data" }, { status: 500 }); }
 }

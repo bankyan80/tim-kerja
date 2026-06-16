@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import {
@@ -120,6 +120,14 @@ export default function DataSiswaPage() {
   const [selectAllPage, setSelectAllPage] = useState(false);
   const [showNaikKelas, setShowNaikKelas] = useState(false);
   const [naikKelasLoading, setNaikKelasLoading] = useState(false);
+  const [matchedSiswa, setMatchedSiswa] = useState<Siswa | null>(null);
+  const nikLookupTimeout = useRef<ReturnType<typeof setTimeout>>(null);
+
+  useEffect(() => {
+    return () => {
+      if (nikLookupTimeout.current) clearTimeout(nikLookupTimeout.current);
+    };
+  }, []);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -270,6 +278,7 @@ export default function DataSiswaPage() {
 
   function openAddModal() {
     setEditingId(null);
+    setMatchedSiswa(null);
     setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
     setModalOpen(true);
   }
@@ -296,13 +305,55 @@ export default function DataSiswaPage() {
       });
       if (res.ok) { setData((prev) => prev.map((s) => (s.id === editingId ? { ...form, id: editingId } : s))); toast.success("Siswa berhasil diupdate"); }
     } else {
+      const payload: any = { ...form };
+      if (matchedSiswa && matchedSiswa.id) {
+        payload.matched_siswa_id = matchedSiswa.id;
+      }
       const res = await fetch("/api/siswa", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
-      if (res.ok) { const newId = String(Date.now()); setData((prev) => [...prev, { ...form, id: newId }]); toast.success("Siswa berhasil ditambahkan"); }
+      if (res.ok) {
+        if (matchedSiswa) {
+          toast.success(`Data ${(matchedSiswa as any).nama_lengkap} dari ${(matchedSiswa as any).sekolah_nama || "TK/KB"} otomatis dipindahkan ke SD`);
+        }
+        setData((prev) => [...prev, { ...form, id: String(Date.now()) }]);
+        toast.success("Siswa berhasil ditambahkan");
+      }
     }
+    setMatchedSiswa(null);
     setModalOpen(false);
+  }
+
+  function handleNikChange(value: string) {
+    updateForm("nik", value);
+    if (!value || editingId) { setMatchedSiswa(null); return; }
+    if (nikLookupTimeout.current) clearTimeout(nikLookupTimeout.current);
+    nikLookupTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/siswa?nik=${encodeURIComponent(value)}`);
+        const found = await res.json();
+        if (found && found.id && found.nik === value) {
+          setMatchedSiswa(found);
+          setForm((prev) => ({
+            ...prev,
+            nama_lengkap: found.nama_lengkap || prev.nama_lengkap,
+            jenis_kelamin: found.jenis_kelamin || prev.jenis_kelamin,
+            tempat_lahir: found.tempat_lahir || prev.tempat_lahir,
+            tanggal_lahir: found.tanggal_lahir || prev.tanggal_lahir,
+            agama: found.agama || prev.agama,
+            alamat: found.alamat || prev.alamat,
+            nama_ayah: found.nama_ayah || prev.nama_ayah,
+            nama_ibu: found.nama_ibu || prev.nama_ibu,
+            nomor_kk: found.nomor_kk || prev.nomor_kk,
+            kontak_orang_tua: found.kontak_orang_tua || prev.kontak_orang_tua,
+          }));
+          toast.success(`Data ${found.nama_lengkap} ditemukan, field otomatis terisi`);
+        } else {
+          setMatchedSiswa(null);
+        }
+      } catch { setMatchedSiswa(null); }
+    }, 500);
   }
 
   function updateForm(key: keyof Siswa, value: string) {
@@ -540,7 +591,12 @@ export default function DataSiswaPage() {
         size="xl"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="NIK" id="nik" value={form.nik} onChange={(e) => updateForm("nik", e.target.value)} />
+          <Input label="NIK" id="nik" value={form.nik} onChange={(e) => !editingId ? handleNikChange(e.target.value) : updateForm("nik", e.target.value)} />
+          {matchedSiswa && !editingId && (
+            <div className="md:col-span-2 p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+              Data otomatis dari: {(matchedSiswa as any).nama_lengkap} ({(matchedSiswa as any).sekolah_nama || "TK/KB"}). Simpan untuk memindahkan ke SD.
+            </div>
+          )}
           <Input label="NISN" id="nisn" value={form.nisn} onChange={(e) => updateForm("nisn", e.target.value)} />
           <Input label="Nama Lengkap" id="nama_lengkap" value={form.nama_lengkap} onChange={(e) => updateForm("nama_lengkap", e.target.value)} />
           <Select

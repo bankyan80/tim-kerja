@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         (SELECT COUNT(*) FROM sarpras WHERE sekolah_id = ? AND deleted_at IS NULL) as sarpras_total,
         (SELECT COUNT(*) FROM spmb WHERE sekolah_id = ?) as spmb_total,
         (SELECT COUNT(*) FROM arsip WHERE sekolah_id = ? AND deleted_at IS NULL) as arsip_total`;
-      args = [sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid];
+      args = [sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid, sid];
     } else {
       sql = `SELECT
         (SELECT COUNT(*) FROM sekolah WHERE deleted_at IS NULL) as sekolah_total,

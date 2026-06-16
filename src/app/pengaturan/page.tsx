@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   Settings,
@@ -12,14 +13,13 @@ import {
   Save,
   Upload,
   RefreshCw,
-  Download,
   Plus,
   Trash2,
   Check,
-
   Clock,
-  HardDrive,
   Camera,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -141,13 +141,7 @@ const initialPermissions: PermissionMap = {
   },
 };
 
-const backupHistory = [
-  { id: "1", tanggal: "2026-06-14 23:00", ukuran: "156 MB", status: "sukses" as const },
-  { id: "2", tanggal: "2026-06-13 23:00", ukuran: "152 MB", status: "sukses" as const },
-  { id: "3", tanggal: "2026-06-12 23:00", ukuran: "150 MB", status: "sukses" as const },
-  { id: "4", tanggal: "2026-06-11 06:30", ukuran: "148 MB", status: "gagal" as const },
-  { id: "5", tanggal: "2026-06-10 23:00", ukuran: "147 MB", status: "sukses" as const },
-];
+const backupHistory: { id: string; tanggal: string; ukuran: string; status: "sukses" | "gagal" }[] = [];
 
 export default function PengaturanPage() {
   const { data: session } = useSession();
@@ -629,29 +623,20 @@ export default function PengaturanPage() {
                 <div className="flex flex-col sm:flex-row gap-6">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <Clock className="w-5 h-5 text-blue-600 shrink-0" />
+                      <Info className="w-5 h-5 text-blue-600 shrink-0" />
                       <div>
-                        <p className="text-sm font-medium text-blue-800">Terakhir Backup</p>
-                        <p className="text-xs text-blue-600">14 Juni 2026, 23:00 WIB</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <HardDrive className="w-5 h-5 text-green-600 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-green-800">Ukuran Database</p>
-                        <p className="text-xs text-green-600">~156 MB</p>
+                        <p className="text-sm font-medium text-blue-800">Backup Otomatis</p>
+                        <p className="text-xs text-blue-600">Backup database dikelola otomatis oleh platform (Turso).</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Button onClick={() => toast.success("Backup database berhasil dibuat")}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Buat Backup
-                    </Button>
-                    <Button variant="outline" onClick={() => toast.success("Backup berhasil dipulihkan")}>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Pulihkan Backup
-                    </Button>
+                    <Link href="https://turso.tech" target="_blank">
+                      <Button variant="outline">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Kelola di Turso
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>

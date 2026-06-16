@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { queryAll, execute } from "@/lib/db";
 import { getSekolahFilter } from "@/lib/auth-utils";
+import { auth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,6 +20,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const { sekolah_id, jenis, nama, jumlah, kondisi_baik, kondisi_sedang, kondisi_rusak, foto, usulan_perbaikan } = b;
@@ -28,6 +31,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const b = await req.json();
     const { id, ...fields } = b;
@@ -42,6 +47,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

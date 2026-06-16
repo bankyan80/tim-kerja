@@ -87,18 +87,20 @@ export default function SarprasPage() {
   const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
 
   useEffect(() => {
+    loadData();
+    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
+  }, [isOperator, userSekolahId]);
+
+  async function loadData() {
     const params = new URLSearchParams();
     if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
     const url = `/api/sarpras${params.toString() ? "?" + params.toString() : ""}`;
-    fetch(url)
-      .then((r) => r.json())
-      .then((d) => {
-        setData(d);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, [isOperator, userSekolahId]);
+    try {
+      const d = await fetch(url).then(r => r.json());
+      setData(d);
+    } catch {}
+    setLoading(false);
+  }
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Sarpras>(defaultForm);
@@ -204,24 +206,21 @@ export default function SarprasPage() {
   async function handleSave() {
     try {
       if (editingId) {
-        const res = await fetch("/api/sarpras", {
+        await fetch("/api/sarpras", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
-        const updated = await res.json();
-        setData((prev) => prev.map((s) => (s.id === editingId ? updated : s)));
         toast.success("Sarpras berhasil diperbarui");
       } else {
-        const res = await fetch("/api/sarpras", {
+        await fetch("/api/sarpras", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
-        const created = await res.json();
-        setData((prev) => [...prev, created]);
         toast.success("Sarpras berhasil dibuat");
       }
+      loadData();
     } catch {
       toast.error("Gagal menyimpan sarpras");
     }
