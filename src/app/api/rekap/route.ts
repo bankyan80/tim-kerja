@@ -179,7 +179,7 @@ export async function GET(request: Request) {
       queryAll("SELECT jenis, SUM(jumlah) as jumlah, SUM(kondisi_baik) as baik, SUM(kondisi_sedang) as sedang, SUM(kondisi_rusak) as rusak FROM sarpras" + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL") + " GROUP BY jenis ORDER BY jenis", args),
 
       // SPMB totals
-      queryAll("SELECT COUNT(*) as total_pendaftar, SUM(pendaftar) as pendaftar, SUM(diterima) as diterima FROM spmb" + (sid ? " WHERE sekolah_id = ?" : "") + (tp ? " AND tahun_pelajaran=?" : ""), sid && tp ? [sid, tp] : sid ? [sid] : tp ? [tp] : []),
+      queryAll("SELECT COUNT(*) as total_pendaftar, SUM(pendaftar) as pendaftar, SUM(diterima) as diterima FROM spmb" + (sid && tp ? " WHERE sekolah_id = ? AND tahun_pelajaran=?" : sid ? " WHERE sekolah_id = ?" : tp ? " WHERE tahun_pelajaran=?" : ""), sid && tp ? [sid, tp] : sid ? [sid] : tp ? [tp] : []),
 
       // SPMB per sekolah
       sid
