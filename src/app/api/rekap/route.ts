@@ -113,7 +113,7 @@ export async function GET() {
         (SELECT COUNT(*) FROM gtk ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as gtk_count,
         (SELECT COUNT(*) FROM laporan_bulanan ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as laporan_count,
         (SELECT COUNT(*) FROM sarpras ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as sarpras_count,
-        (SELECT COUNT(*) FROM spmb ${sid ? "WHERE sekolah_id = ? AND " : ""} 1=1) as spmb_count,
+        (SELECT COUNT(*) FROM spmb ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} 1=1) as spmb_count,
         (SELECT COUNT(*) FROM surat WHERE deleted_at IS NULL) as surat_count,
         (SELECT COUNT(*) FROM arsip ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as arsip_count
       `, sid ? [sid, sid, sid, sid, sid, sid] : []),
