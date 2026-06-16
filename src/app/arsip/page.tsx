@@ -166,12 +166,18 @@ export default function ArsipPage() {
   const fetchData = useCallback(() => {
     const params = new URLSearchParams();
     if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
+    if (filterJenis) params.set("jenis_dokumen", filterJenis);
+    if (filterSekolah && !isOperator) params.set("sekolah_id", filterSekolah);
+    if (filterTahun) params.set("tahun", filterTahun);
     const url = `/api/arsip${params.toString() ? "?" + params.toString() : ""}`;
     fetch(url)
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
+      .then((d) => {
+        setData(d.map((item: any) => ({ ...item, tahun: Number(item.tahun) })));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
-  }, [isOperator, userSekolahId]);
+  }, [isOperator, userSekolahId, filterJenis, filterSekolah, filterTahun]);
 
   const fetchStats = useCallback(() => {
     fetch("/api/arsip/stats")
@@ -202,22 +208,16 @@ export default function ArsipPage() {
   }, [form.sekolah_id]);
 
   const filteredData = useMemo(() => {
-    let result = data;
-    if (filterSearch) {
-      const q = filterSearch.toLowerCase();
-      result = result.filter(
-        (a) =>
-          (a.file_name || "").toLowerCase().includes(q) ||
-          a.pemilik.toLowerCase().includes(q) ||
-          a.jenis_dokumen.toLowerCase().includes(q) ||
-          (a.sekolah_nama || "").toLowerCase().includes(q)
-      );
-    }
-    if (filterJenis) result = result.filter((a) => a.jenis_dokumen === filterJenis);
-    if (filterSekolah) result = result.filter((a) => a.sekolah_id === filterSekolah);
-    if (filterTahun) result = result.filter((a) => a.tahun === Number(filterTahun));
-    return result;
-  }, [data, filterSearch, filterJenis, filterSekolah, filterTahun]);
+    if (!filterSearch) return data;
+    const q = filterSearch.toLowerCase();
+    return data.filter(
+      (a) =>
+        (a.file_name || "").toLowerCase().includes(q) ||
+        a.pemilik.toLowerCase().includes(q) ||
+        a.jenis_dokumen.toLowerCase().includes(q) ||
+        (a.sekolah_nama || "").toLowerCase().includes(q)
+    );
+  }, [data, filterSearch]);
 
   const columns: ColumnDef<ArsipRow>[] = useMemo(
     () => [

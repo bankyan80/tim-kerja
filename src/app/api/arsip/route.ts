@@ -40,6 +40,8 @@ export async function GET(req: NextRequest) {
     const args: any[] = [];
     if (jenis) { sql += " AND a.jenis_dokumen = ?"; args.push(jenis); }
     if (sekolah_id) { sql += " AND a.sekolah_id = ?"; args.push(sekolah_id); }
+    const tahun = searchParams.get("tahun");
+    if (tahun) { sql += " AND a.tahun = ?"; args.push(tahun); }
     sql += " ORDER BY a.created_at DESC";
     if (limit) { sql += " LIMIT ?"; args.push(Number(limit)); }
     if (offset) { sql += " OFFSET ?"; args.push(Number(offset)); }
