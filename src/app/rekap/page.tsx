@@ -39,7 +39,7 @@ type RekapData = {
   dataSiswa: { total: number; laki: number; perempuan: number; perKelasSD: { kelas: string; jumlah: number }[]; perKelasTK: { kelas: string; jumlah: number }[]; perSekolahSD: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[]; perSekolahTK: { sekolah: string; total: number; laki: number; perempuan: number; kelas_a: number; kelas_b: number; kelas_c: number }[] };
   dataGTK: { total: number; pns: number; nonPns: number; honorer: number; perSekolah: { sekolah: string; total: number; pns: number; nonPns: number; honorer: number }[] };
   mappingPegawai: { sekolah: string; kepala_sekolah: string; guru: number; staf: number; operator: string }[];
-  laporanBulanan: { sekolahNama: string[]; stats: Record<string, unknown> };
+  laporanBulanan: { sekolahNama: string[]; stats: Record<string, unknown>; perSekolah: { sekolah: string; bulan: number; selesai: number; draft: number; dikirim: number; perlu_perbaikan: number }[] };
   sarpras: { totalRuang: number; totalUnit: number; kondisiBaik: number; kondisiSedang: number; kondisiRusak: number; perJenis: { jenis: string; jumlah: number; baik: number; sedang: number; rusak: number }[] };
   spmb: { totalPendaftar: number; diterima: number; cadangan: number; mengundurkanDiri: number; perSekolah: { sekolah: string; pendaftar: number; diterima: number; cadangan: number; mengundur: number }[] };
   surat: { total: number; masuk: number; keluar: number; disposisi: number; perBulan: { bulan: string; masuk: number; keluar: number }[] };
@@ -55,12 +55,13 @@ export default function RekapPage() {
   const [tahunPelajaran, setTahunPelajaran] = useState("2025/2026");
 
   useEffect(() => {
-    fetch("/api/rekap")
+    setLoading(true);
+    fetch("/api/rekap?tahunPelajaran=" + encodeURIComponent(tahunPelajaran))
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [tahunPelajaran]);
 
   const overallProgress = data?.progresData?.length
     ? Math.round(data.progresData.reduce((sum, p) => sum + p.persentase, 0) / data.progresData.length)
@@ -319,20 +320,57 @@ function MappingPegawaiTab({ data }: { data?: { sekolah: string; kepala_sekolah:
   );
 }
 
-function LaporanBulananTab({ data }: { data?: { sekolahNama: string[]; stats: Record<string, unknown> } }) {
-  if (!data?.sekolahNama?.length) return <EmptyState title="Belum ada data laporan bulanan" />;
-  const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function LaporanBulananTab({ data }: { data?: { sekolahNama: string[]; stats: Record<string, unknown>; perSekolah: { sekolah: string; bulan: number; selesai: number; draft: number; dikirim: number; perlu_perbaikan: number }[] } }) {
+  const stats = data?.stats as Record<string, number> | undefined;
+  if (!stats) return <EmptyState title="Belum ada data laporan bulanan" />;
+  const monthNames = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  const sekolahList = [...new Set(data?.perSekolah?.map(r => r.sekolah) || [])];
+  const byKey: Record<string, { sekolah: string; bulan: number; selesai: number }> = {};
+  for (const r of (data?.perSekolah || [])) {
+    if (r.selesai > 0) byKey[r.sekolah + "-" + r.bulan] = r;
+  }
   return (
-    <div>
-      <TabTable
-        headers={["Bulan", ...data.sekolahNama]}
-        rows={months.map((bulan) => [
-          bulan,
-          ...data.sekolahNama.map(() => (
-            <span key={bulan} className="text-gray-400">&mdash;</span>
-          )),
-        ])}
-      />
+    <div className="space-y-6">
+      <div className="grid grid-cols-5 gap-4">
+        <StatCard label="Total Laporan" value={stats.total ?? 0} variant="info" />
+        <StatCard label="Terverifikasi" value={stats.selesai ?? 0} variant="success" />
+        <StatCard label="Draft" value={stats.draft ?? 0} variant="warning" />
+        <StatCard label="Dikirim" value={stats.dikirim ?? 0} variant="default" />
+        <StatCard label="Perlu Perbaikan" value={stats.perlu_perbaikan ?? 0} variant="danger" />
+      </div>
+      {sekolahList.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Sekolah</th>
+                {monthNames.map(m => <th key={m} className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase">{m}</th>)}
+                <th className="px-2 py-2 text-center text-xs font-semibold text-gray-600 uppercase">Total</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sekolahList.map((sekolah) => {
+                const sekolahPerBulan = monthNames.map((_, i) => {
+                  const r = byKey[sekolah + "-" + (i + 1)];
+                  return r ? r.selesai : 0;
+                });
+                const totalSelesai = sekolahPerBulan.reduce((a, b) => a + b, 0);
+                return (
+                  <tr key={sekolah} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{sekolah}</td>
+                    {sekolahPerBulan.map((v, i) => (
+                      <td key={i} className="px-2 py-2 text-sm text-center whitespace-nowrap">
+                        {v > 0 ? <span className="text-green-600 font-medium">{v}</span> : <span className="text-gray-300">{'\u2014'}</span>}
+                      </td>
+                    ))}
+                    <td className="px-2 py-2 text-sm text-center font-semibold whitespace-nowrap">{totalSelesai}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

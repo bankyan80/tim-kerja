@@ -108,6 +108,8 @@ export default function SarprasPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [filterSekolah, setFilterSekolah] = useState("");
   const [filterJenis, setFilterJenis] = useState("");
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -182,12 +184,14 @@ export default function SarprasPage() {
   function openAddModal() {
     setEditingId(null);
     setForm({ ...defaultForm, sekolah_id: isOperator && userSekolahId ? userSekolahId : "" });
+    setFotoFile(null);
     setModalOpen(true);
   }
 
   function handleEdit(sarpras: Sarpras) {
     setEditingId(sarpras.id);
     setForm(sarpras);
+    setFotoFile(null);
     setModalOpen(true);
   }
 
@@ -205,18 +209,30 @@ export default function SarprasPage() {
 
   async function handleSave() {
     try {
+      setUploading(true);
+      let fotoUrl = form.foto;
+      if (fotoFile) {
+        const fd = new FormData();
+        fd.append("file", fotoFile);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+        if (uploadRes.ok) {
+          const { url } = await uploadRes.json();
+          fotoUrl = url;
+        }
+      }
+      const payload = { ...form, foto: fotoUrl };
       if (editingId) {
         await fetch("/api/sarpras", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         toast.success("Sarpras berhasil diperbarui");
       } else {
         await fetch("/api/sarpras", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         toast.success("Sarpras berhasil dibuat");
       }
@@ -224,6 +240,8 @@ export default function SarprasPage() {
     } catch {
       toast.error("Gagal menyimpan sarpras");
     }
+    setUploading(false);
+    setFotoFile(null);
     setModalOpen(false);
   }
 
@@ -390,12 +408,18 @@ export default function SarprasPage() {
             value={form.kondisi_rusak}
             onChange={(e) => updateForm("kondisi_rusak", Number(e.target.value))}
           />
-          <Input
-            label="Foto"
-            id="foto"
-            type="file"
-            onChange={(e) => updateForm("foto", e.target.value)}
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Foto</label>
+            <input
+              id="foto"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFotoFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {fotoFile && <p className="text-xs text-green-600 mt-1">{fotoFile.name} dipilih</p>}
+            {form.foto && !fotoFile && <p className="text-xs text-gray-500 mt-1">Foto saat ini: {form.foto}</p>}
+          </div>
           <div className="md:col-span-2">
             <Textarea
               label="Usulan Perbaikan"
@@ -432,7 +456,16 @@ export default function SarprasPage() {
               <DetailField label="Kondisi Baik" value={String(viewing.kondisi_baik)} />
               <DetailField label="Kondisi Sedang" value={String(viewing.kondisi_sedang)} />
               <DetailField label="Kondisi Rusak" value={String(viewing.kondisi_rusak)} />
-              {viewing.foto && <DetailField label="Foto" value={viewing.foto} />}
+              {viewing.foto && (
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Foto</label>
+                  {viewing.foto.startsWith("http") || viewing.foto.startsWith("/uploads/") ? (
+                    <img src={viewing.foto} alt="Foto sarpras" className="max-w-xs rounded-lg border" />
+                  ) : (
+                    <span className="text-sm text-gray-700">{viewing.foto}</span>
+                  )}
+                </div>
+              )}
             </div>
             {viewing.usulan_perbaikan && (
               <div>

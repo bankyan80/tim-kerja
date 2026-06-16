@@ -1,17 +1,26 @@
 import { NextResponse } from "next/server";
 import { queryAll } from "@/lib/db";
 import { getSekolahFilter } from "@/lib/auth-utils";
+import type { InValue } from "@libsql/client";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { forcedSekolah } = await getSekolahFilter();
     const sid = forcedSekolah;
+    const url = new URL(request.url);
+    const tp = url.searchParams.get("tahunPelajaran");
 
     const wh = sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL";
     const args = sid ? [sid] : [];
+    const whTp = tp ? (sid ? " AND tahun_pelajaran = ?" : " WHERE tahun_pelajaran = ? AND deleted_at IS NULL") : "";
+    const argsTp = tp ? [...args, tp] : args;
+    const whSidTp = tp
+      ? (sid ? " WHERE sekolah_id = ? AND tahun_pelajaran = ? AND deleted_at IS NULL" : " WHERE tahun_pelajaran = ? AND deleted_at IS NULL")
+      : wh;
+    const argsSidTp = tp ? (sid ? [sid, tp] : [tp]) : args;
 
     const [sekolah, siswaKelasSD, siswaKelasTK, siswaGender, siswaPerSekolahSD, siswaPerSekolahTK, gtkTotals, gtkPerSekolah, mapPegawai,
-      laporanStats, sarprasTotals, sarprasJenis, spmbTotals, spmbSekolah, suratTotals,
+      laporanStats, laporanPerSekolah, sarprasTotals, sarprasJenis, spmbTotals, spmbSekolah, suratTotals,
       suratBulan, progresData] = await Promise.all([
       // Sekolah
       sid
@@ -29,16 +38,16 @@ export async function GET() {
 
       // Siswa per kelas - SD
       sid
-        ? queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE siswa.sekolah_id=? AND s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas", [sid])
-        : queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas"),
+        ? queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE siswa.sekolah_id=? AND s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL" + (tp ? " AND siswa.tahun_pelajaran=?" : "") + " GROUP BY kelas ORDER BY kelas", tp ? [sid, tp] : [sid])
+        : queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL" + (tp ? " AND siswa.tahun_pelajaran=?" : "") + " GROUP BY kelas ORDER BY kelas", tp ? [tp] : []),
 
       // Siswa per kelas - TK/KB
       sid
-        ? queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE siswa.sekolah_id=? AND s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas", [sid])
-        : queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL GROUP BY kelas ORDER BY kelas"),
+        ? queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE siswa.sekolah_id=? AND s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL" + (tp ? " AND siswa.tahun_pelajaran=?" : "") + " GROUP BY kelas ORDER BY kelas", tp ? [sid, tp] : [sid])
+        : queryAll("SELECT kelas, COUNT(*) as jumlah FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id WHERE s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL" + (tp ? " AND siswa.tahun_pelajaran=?" : "") + " GROUP BY kelas ORDER BY kelas", tp ? [tp] : []),
 
       // Siswa gender
-      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis_kelamin='L' THEN 1 ELSE 0 END) as laki, SUM(CASE WHEN jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan FROM siswa" + wh, args),
+      queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis_kelamin='L' THEN 1 ELSE 0 END) as laki, SUM(CASE WHEN jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan FROM siswa" + whTp, argsTp),
 
       // Siswa per sekolah SD (kelas I-VI)
       sid
@@ -52,8 +61,8 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='V' THEN 1 ELSE 0 END) as kelas_v,
             SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
-          WHERE siswa.sekolah_id=? AND s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL
-          GROUP BY s.nama ORDER BY s.nama`, [sid])
+          WHERE siswa.sekolah_id=? AND s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL` + (tp ? " AND siswa.tahun_pelajaran=?" : "") + `
+          GROUP BY s.nama ORDER BY s.nama`, tp ? [sid, tp] : [sid])
         : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
             SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
             SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
@@ -64,8 +73,8 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='V' THEN 1 ELSE 0 END) as kelas_v,
             SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
-          WHERE s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL
-          GROUP BY s.nama ORDER BY s.nama`),
+          WHERE s.nama LIKE 'SD%' AND siswa.deleted_at IS NULL` + (tp ? " AND siswa.tahun_pelajaran=?" : "") + `
+          GROUP BY s.nama ORDER BY s.nama`, tp ? [tp] : []),
 
       // Siswa per sekolah TK/KB (kelas A, B, C)
       sid
@@ -76,8 +85,8 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='II' THEN 1 ELSE 0 END) as kelas_b,
             SUM(CASE WHEN siswa.kelas='III' THEN 1 ELSE 0 END) as kelas_c
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
-          WHERE siswa.sekolah_id=? AND s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL
-          GROUP BY s.nama ORDER BY s.nama`, [sid])
+          WHERE siswa.sekolah_id=? AND s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL` + (tp ? " AND siswa.tahun_pelajaran=?" : "") + `
+          GROUP BY s.nama ORDER BY s.nama`, tp ? [sid, tp] : [sid])
         : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
             SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
             SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
@@ -85,7 +94,7 @@ export async function GET() {
             SUM(CASE WHEN siswa.kelas='II' THEN 1 ELSE 0 END) as kelas_b,
             SUM(CASE WHEN siswa.kelas='III' THEN 1 ELSE 0 END) as kelas_c
           FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
-          WHERE s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL
+          WHERE s.nama NOT LIKE 'SD%' AND siswa.deleted_at IS NULL` + (tp ? " AND siswa.tahun_pelajaran=?" : "") + `
           GROUP BY s.nama
           ORDER BY
             CASE
@@ -93,9 +102,9 @@ export async function GET() {
               WHEN s.nama LIKE 'KB%' THEN 2
               WHEN s.nama LIKE 'PAUD%' THEN 3
               ELSE 4
-            END, s.nama`),
+            END, s.nama`, tp ? [tp] : []),
 
-      // GTK totals
+      // GTK totals (no tahun_pelajaran column)
       queryAll(`SELECT COUNT(*) as total,
         SUM(CASE WHEN LOWER(status_pegawai)='pns' THEN 1 ELSE 0 END) as pns,
         SUM(CASE WHEN LOWER(status_pegawai)!='pns' THEN 1 ELSE 0 END) as non_pns,
@@ -151,7 +160,17 @@ export async function GET() {
         SUM(CASE WHEN status='draft' THEN 1 ELSE 0 END) as draft,
         SUM(CASE WHEN status='dikirim' THEN 1 ELSE 0 END) as dikirim,
         SUM(CASE WHEN status='perlu_perbaikan' THEN 1 ELSE 0 END) as perlu_perbaikan
-      FROM laporan_bulanan` + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL"), args),
+      FROM laporan_bulanan` + whSidTp, argsSidTp),
+
+      // Laporan per sekolah per bulan
+      queryAll(`SELECT s.nama as sekolah, lb.bulan,
+        SUM(CASE WHEN lb.status='terverifikasi' THEN 1 ELSE 0 END) as selesai,
+        SUM(CASE WHEN lb.status='draft' THEN 1 ELSE 0 END) as draft,
+        SUM(CASE WHEN lb.status='dikirim' THEN 1 ELSE 0 END) as dikirim,
+        SUM(CASE WHEN lb.status='perlu_perbaikan' THEN 1 ELSE 0 END) as perlu_perbaikan
+      FROM laporan_bulanan lb JOIN sekolah s ON lb.sekolah_id=s.id
+      WHERE lb.deleted_at IS NULL` + (tp ? " AND lb.tahun_pelajaran=?" : "") + (sid ? " AND lb.sekolah_id=?" : "") + `
+      GROUP BY s.nama, lb.bulan ORDER BY s.nama, lb.bulan`, tp ? (sid ? [tp, sid] : [tp]) : (sid ? [sid] : [])),
 
       // Sarpras totals
       queryAll("SELECT COUNT(*) as total, SUM(jumlah) as total_unit, SUM(kondisi_baik) as kondisi_baik, SUM(kondisi_sedang) as kondisi_sedang, SUM(kondisi_rusak) as kondisi_rusak FROM sarpras" + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL"), args),
@@ -160,12 +179,12 @@ export async function GET() {
       queryAll("SELECT jenis, SUM(jumlah) as jumlah, SUM(kondisi_baik) as baik, SUM(kondisi_sedang) as sedang, SUM(kondisi_rusak) as rusak FROM sarpras" + (sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL") + " GROUP BY jenis ORDER BY jenis", args),
 
       // SPMB totals
-      queryAll("SELECT COUNT(*) as total_pendaftar, SUM(pendaftar) as pendaftar, SUM(diterima) as diterima FROM spmb" + (sid ? " WHERE sekolah_id = ?" : ""), sid ? [sid] : []),
+      queryAll("SELECT COUNT(*) as total_pendaftar, SUM(pendaftar) as pendaftar, SUM(diterima) as diterima FROM spmb" + (sid ? " WHERE sekolah_id = ?" : "") + (tp ? " AND tahun_pelajaran=?" : ""), sid && tp ? [sid, tp] : sid ? [sid] : tp ? [tp] : []),
 
       // SPMB per sekolah
       sid
-        ? queryAll("SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id WHERE sp.sekolah_id=?", [sid])
-        : queryAll(`SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id
+        ? queryAll("SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id WHERE sp.sekolah_id=?" + (tp ? " AND sp.tahun_pelajaran=?" : ""), tp ? [sid, tp] : [sid])
+        : queryAll(`SELECT s.nama as sekolah, sp.pendaftar, sp.diterima FROM spmb sp JOIN sekolah s ON sp.sekolah_id=s.id` + (tp ? " WHERE sp.tahun_pelajaran=?" : "") + `
         ORDER BY
           CASE
             WHEN s.nama LIKE 'SD%' THEN 1
@@ -173,7 +192,7 @@ export async function GET() {
             WHEN s.nama LIKE 'KB%' THEN 3
             WHEN s.nama LIKE 'PAUD%' THEN 4
             ELSE 5
-          END, s.nama`),
+          END, s.nama`, tp ? [tp] : []),
 
       // Surat totals
       queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis='masuk' THEN 1 ELSE 0 END) as masuk, SUM(CASE WHEN jenis='keluar' THEN 1 ELSE 0 END) as keluar FROM surat WHERE deleted_at IS NULL"),
@@ -195,14 +214,25 @@ export async function GET() {
       queryAll(`SELECT
         (SELECT COUNT(*) FROM sekolah WHERE deleted_at IS NULL) as sekolah_count,
         CASE WHEN (SELECT COUNT(*) FROM sekolah WHERE deleted_at IS NULL) > 0 THEN 100 ELSE 0 END as sekolah_persen,
-        (SELECT COUNT(*) FROM siswa ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as siswa_count,
+        (SELECT COUNT(*) FROM siswa ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL${tp ? " AND tahun_pelajaran=?" : ""}) as siswa_count,
         (SELECT COUNT(*) FROM gtk ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as gtk_count,
-        (SELECT COUNT(*) FROM laporan_bulanan ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as laporan_count,
+        (SELECT COUNT(*) FROM laporan_bulanan ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL${tp ? " AND tahun_pelajaran=?" : ""}) as laporan_count,
         (SELECT COUNT(*) FROM sarpras ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as sarpras_count,
-        (SELECT COUNT(*) FROM spmb ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} 1=1) as spmb_count,
+        (SELECT COUNT(*) FROM spmb ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} 1=1${tp ? " AND tahun_pelajaran=?" : ""}) as spmb_count,
         (SELECT COUNT(*) FROM surat WHERE deleted_at IS NULL) as surat_count,
         (SELECT COUNT(*) FROM arsip ${sid ? "WHERE sekolah_id = ? AND " : "WHERE "} deleted_at IS NULL) as arsip_count
-      `, sid ? [sid, sid, sid, sid, sid, sid] : []),
+      `, (() => {
+        const progArgs: InValue[] = [];
+        if (sid) progArgs.push(sid);
+        if (tp) progArgs.push(tp);
+        if (sid) progArgs.push(sid);
+        if (tp) progArgs.push(tp);
+        if (sid) progArgs.push(sid);
+        if (tp) progArgs.push(tp);
+        if (sid) progArgs.push(sid);
+        if (sid) progArgs.push(sid);
+        return progArgs;
+      })()),
     ]);
 
     function p(v: unknown) {
@@ -220,7 +250,7 @@ export async function GET() {
 
     const progresKategori = [
       { kategori: "Data Sekolah", count: p(pd.sekolah_count), persentase: p(pd.sekolah_persen) },
-      { kategori: "Data Siswa", count: p(pd.siswa_count), persentase: Math.min(100, Math.round(p(pd.siswa_count) / Math.max(1, p(pd.siswa_count)) * 100)) },
+      { kategori: "Data Siswa", count: p(pd.siswa_count), persentase: p(pd.siswa_count) > 0 ? Math.min(100, Math.round(p(pd.siswa_count) / Math.max(1, p(pd.sekolah_count) * 50) * 100)) : 0 },
       { kategori: "Data GTK", count: p(pd.gtk_count), persentase: p(pd.gtk_count) > 0 ? 95 : 0 },
       { kategori: "Laporan Bulanan", count: p(pd.laporan_count), persentase: Math.min(100, Math.round(p(pd.laporan_count) / (p(pd.sekolah_count) * 12 || 1) * 100)) },
       { kategori: "Sarpras", count: p(pd.sarpras_count), persentase: p(pd.sarpras_count) > 0 ? 90 : 0 },
@@ -292,6 +322,14 @@ export async function GET() {
       laporanBulanan: {
         sekolahNama: sekolahNamaList,
         stats: lt,
+        perSekolah: laporanPerSekolah.map((r: Record<string, unknown>) => ({
+          sekolah: String(r.sekolah || ""),
+          bulan: p(r.bulan),
+          selesai: p(r.selesai),
+          draft: p(r.draft),
+          dikirim: p(r.dikirim),
+          perlu_perbaikan: p(r.perlu_perbaikan),
+        })),
       },
       sarpras: {
         totalRuang: p(st.total),
@@ -342,7 +380,7 @@ export async function GET() {
       dataSiswa: { total: 0, laki: 0, perempuan: 0, perKelasSD: [] as { kelas: string; jumlah: number }[], perKelasTK: [] as { kelas: string; jumlah: number }[], perSekolahSD: [] as { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[], perSekolahTK: [] as { sekolah: string; total: number; laki: number; perempuan: number; kelas_a: number; kelas_b: number; kelas_c: number }[] },
       dataGTK: { total: 0, pns: 0, nonPns: 0, honorer: 0, perSekolah: [] as { sekolah: string; total: number; pns: number; nonPns: number; honorer: number }[] },
       mappingPegawai: [] as { sekolah: string; kepala_sekolah: string; guru: number; staf: number; operator: string }[],
-      laporanBulanan: { sekolahNama: [] as string[], stats: {} },
+      laporanBulanan: { sekolahNama: [] as string[], stats: {}, perSekolah: [] as { sekolah: string; bulan: number; selesai: number; draft: number; dikirim: number; perlu_perbaikan: number }[] },
       sarpras: { totalRuang: 0, totalUnit: 0, kondisiBaik: 0, kondisiSedang: 0, kondisiRusak: 0, perJenis: [] as { jenis: string; jumlah: number; baik: number; sedang: number; rusak: number }[] },
       spmb: { totalPendaftar: 0, diterima: 0, cadangan: 0, mengundurkanDiri: 0, perSekolah: [] as { sekolah: string; pendaftar: number; diterima: number; cadangan: number; mengundur: number }[] },
       surat: { total: 0, masuk: 0, keluar: 0, disposisi: 0, perBulan: [] as { bulan: string; masuk: number; keluar: number }[] },

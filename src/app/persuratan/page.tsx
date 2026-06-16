@@ -67,7 +67,7 @@ export default function SuratMasukPage() {
   const pathname = usePathname();
   const [data, setData] = useState<SuratMasuk[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search] = useState("");
+  const [search, setSearch] = useState("");
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<SuratMasuk>({
@@ -217,8 +217,15 @@ export default function SuratMasukPage() {
           </Button>
         </div>
 
-        {/* Table */}
+        {/* Search & Table */}
         <Card>
+          <div className="mb-4">
+            <Input
+              placeholder="Cari berdasarkan nomor agenda, nomor surat, asal, atau perihal..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           {filteredData.length === 0 ? (
             <EmptyState
               title="Belum ada surat masuk"
