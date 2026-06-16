@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import {
@@ -10,6 +10,13 @@ import {
   Trash2,
   Download,
   Search,
+  Upload,
+  FileDown,
+  FileUp,
+  X,
+  FileText,
+  Image,
+  File,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -19,6 +26,8 @@ import Button from "@/components/ui/Button";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate, getBulanName } from "@/lib/utils";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/ui/Table";
 
 type JenisDokumen =
   | "Surat"
@@ -41,25 +50,18 @@ type JenisDokumen =
   | "SK Penugasan"
   | "Sertifikat Pendidik";
 
-interface VersiArsip {
-  versi: number;
-  file: string;
-  tanggal_upload: string;
-  file_size: string;
-}
-
-interface Arsip {
+interface ArsipRow {
   id: string;
   jenis_dokumen: JenisDokumen;
   sekolah_id: string;
+  sekolah_nama?: string;
   bulan: number;
   tahun: number;
   pemilik: string;
   file: string;
-  file_name: string;
+  file_name?: string;
   versi: number;
   tanggal_upload: string;
-  sekolah_nama?: string;
 }
 
 interface SekolahOption {
@@ -67,50 +69,40 @@ interface SekolahOption {
   nama: string;
 }
 
+interface StatsData {
+  total: number;
+  byJenis: { jenis_dokumen: string; count: number }[];
+}
+
 const sekolahList: SekolahOption[] = [];
 
 const jenisDokumenList: JenisDokumen[] = [
-  "Surat",
-  "Laporan",
-  "SK",
-  "Dokumen Siswa",
-  "Dokumen GTK",
-  "Sarpras",
-  "SPMB",
-  "Kegiatan",
-  "Monitoring",
-  "Lainnya",
-  "BPJS Kesehatan",
-  "Ijazah",
-  "KTP",
-  "Kartu Keluarga",
-  "NPWP",
-  "Pass Foto",
-  "SK PPPK PW",
-  "SK Penugasan",
+  "Surat", "Laporan", "SK", "Dokumen Siswa", "Dokumen GTK", "Sarpras",
+  "SPMB", "Kegiatan", "Monitoring", "Lainnya", "BPJS Kesehatan", "Ijazah",
+  "KTP", "Kartu Keluarga", "NPWP", "Pass Foto", "SK PPPK PW", "SK Penugasan",
   "Sertifikat Pendidik",
 ];
 
-const jenisDokumenBadge: Record<JenisDokumen, { variant: "default" | "success" | "warning" | "danger" | "info" }> = {
-  Surat: { variant: "info" },
-  Laporan: { variant: "success" },
-  SK: { variant: "warning" },
-  "Dokumen Siswa": { variant: "default" },
-  "Dokumen GTK": { variant: "danger" },
-  Sarpras: { variant: "info" },
-  SPMB: { variant: "warning" },
-  Kegiatan: { variant: "success" },
-  Monitoring: { variant: "default" },
-  Lainnya: { variant: "default" },
-  "BPJS Kesehatan": { variant: "info" },
-  Ijazah: { variant: "success" },
-  KTP: { variant: "info" },
-  "Kartu Keluarga": { variant: "info" },
-  NPWP: { variant: "warning" },
-  "Pass Foto": { variant: "success" },
-  "SK PPPK PW": { variant: "warning" },
-  "SK Penugasan": { variant: "warning" },
-  "Sertifikat Pendidik": { variant: "success" },
+const jenisDokumenBadge: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
+  Surat: "info",
+  Laporan: "success",
+  SK: "warning",
+  "Dokumen Siswa": "default",
+  "Dokumen GTK": "danger",
+  Sarpras: "info",
+  SPMB: "warning",
+  Kegiatan: "success",
+  Monitoring: "default",
+  Lainnya: "default",
+  "BPJS Kesehatan": "info",
+  Ijazah: "success",
+  KTP: "info",
+  "Kartu Keluarga": "info",
+  NPWP: "warning",
+  "Pass Foto": "success",
+  "SK PPPK PW": "warning",
+  "SK Penugasan": "warning",
+  "Sertifikat Pendidik": "success",
 };
 
 const bulanOptions = Array.from({ length: 12 }, (_, i) => ({
@@ -118,13 +110,22 @@ const bulanOptions = Array.from({ length: 12 }, (_, i) => ({
   label: getBulanName(i + 1),
 }));
 
-const tahunOptions = Array.from({ length: 6 }, (_, i) => {
-  const year = new Date().getFullYear() - 2 + i;
+const tahunOptions = Array.from({ length: 8 }, (_, i) => {
+  const year = new Date().getFullYear() - 3 + i;
   return { value: String(year), label: String(year) };
 });
 
-const defaultForm: Arsip = {
-  id: "",
+interface FormState {
+  jenis_dokumen: string;
+  sekolah_id: string;
+  bulan: number;
+  tahun: number;
+  pemilik: string;
+  file: string;
+  file_name: string;
+}
+
+const defaultForm: FormState = {
   jenis_dokumen: "Surat",
   sekolah_id: "",
   bulan: new Date().getMonth() + 1,
@@ -132,23 +133,37 @@ const defaultForm: Arsip = {
   pemilik: "",
   file: "",
   file_name: "",
-  versi: 1,
-  tanggal_upload: new Date().toISOString().split("T")[0],
-  sekolah_nama: "",
 };
-
-
 
 export default function ArsipPage() {
   const { data: session } = useSession();
   const isOperator = session?.user?.role === "operator_sekolah";
   const userSekolahId = session?.user?.sekolah_id;
 
-  const [data, setData] = useState<Arsip[]>([]);
+  const [data, setData] = useState<ArsipRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sekolahList, setSekolahList] = useState<SekolahOption[]>([]);
+  const [sekolahOpts, setSekolahOpts] = useState<SekolahOption[]>([]);
+  const [stats, setStats] = useState<StatsData>({ total: 0, byJenis: [] });
 
-  function fetchList() {
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterJenis, setFilterJenis] = useState("");
+  const [filterSekolah, setFilterSekolah] = useState("");
+  const [filterTahun, setFilterTahun] = useState("");
+
+  const [selectedArsip, setSelectedArsip] = useState<ArsipRow | null>(null);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(defaultForm);
+  const [gtkPegawai, setGtkPegawai] = useState<string[]>([]);
+  const [loadingPegawai, setLoadingPegawai] = useState(false);
+
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importData, setImportData] = useState("");
+
+  const fetchData = useCallback(() => {
     const params = new URLSearchParams();
     if (isOperator && userSekolahId) params.set("sekolah_id", userSekolahId);
     const url = `/api/arsip${params.toString() ? "?" + params.toString() : ""}`;
@@ -156,73 +171,143 @@ export default function ArsipPage() {
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }
+  }, [isOperator, userSekolahId]);
+
+  const fetchStats = useCallback(() => {
+    fetch("/api/arsip/stats")
+      .then((r) => r.json())
+      .then((d) => setStats(d))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
-    fetchList();
-    fetch("/api/sekolah").then(r => r.json()).then(d => setSekolahList(d.map((s: any) => ({ id: s.id, nama: s.nama })))).catch(() => {});
-  }, [isOperator, userSekolahId]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Arsip>(defaultForm);
-  const [viewing, setViewing] = useState<Arsip | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [gtkPegawai, setGtkPegawai] = useState<string[]>([]);
-  const [loadingPegawai, setLoadingPegawai] = useState(false);
-  const [filterJenisDokumen, setFilterJenisDokumen] = useState("");
-  const [filterSekolah, setFilterSekolah] = useState("");
-  const [filterTahun, setFilterTahun] = useState("");
-  const [expandedPemilik, setExpandedPemilik] = useState<string | null>(null);
+    fetchData();
+    fetchStats();
+    fetch("/api/sekolah")
+      .then((r) => r.json())
+      .then((d) => setSekolahOpts(d.map((s: any) => ({ id: s.id, nama: s.nama }))))
+      .catch(() => {});
+  }, [fetchData, fetchStats]);
 
-  const groupedData = useMemo(() => {
+  useEffect(() => {
+    if (!form.sekolah_id) { setGtkPegawai([]); return; }
+    setLoadingPegawai(true);
+    fetch(`/api/gtk?sekolah_id=${form.sekolah_id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setGtkPegawai(d.map((g: any) => g.nama).filter((n: string) => n.trim()));
+        setLoadingPegawai(false);
+      })
+      .catch(() => setLoadingPegawai(false));
+  }, [form.sekolah_id]);
+
+  const filteredData = useMemo(() => {
     let result = data;
-    if (search) {
-      const q = search.toLowerCase();
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
       result = result.filter(
         (a) =>
           (a.file_name || "").toLowerCase().includes(q) ||
           a.pemilik.toLowerCase().includes(q) ||
-          a.jenis_dokumen.toLowerCase().includes(q)
+          a.jenis_dokumen.toLowerCase().includes(q) ||
+          (a.sekolah_nama || "").toLowerCase().includes(q)
       );
     }
-    if (filterJenisDokumen) {
-      result = result.filter((a) => a.jenis_dokumen === filterJenisDokumen);
-    }
-    if (filterSekolah) {
-      result = result.filter((a) => a.sekolah_id === filterSekolah);
-    }
-    if (filterTahun) {
-      result = result.filter((a) => a.tahun === Number(filterTahun));
-    }
-    const grouped: Record<string, { arsip: Arsip[]; sekolah_id: string; sekolah_nama: string }> = {};
-    for (const a of result) {
-      const key = a.pemilik || "(tanpa nama)";
-      if (!grouped[key]) grouped[key] = { arsip: [], sekolah_id: a.sekolah_id, sekolah_nama: a.sekolah_nama || "" };
-      grouped[key].arsip.push(a);
-    }
-    return Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [data, search, filterJenisDokumen, filterSekolah, filterTahun]);
+    if (filterJenis) result = result.filter((a) => a.jenis_dokumen === filterJenis);
+    if (filterSekolah) result = result.filter((a) => a.sekolah_id === filterSekolah);
+    if (filterTahun) result = result.filter((a) => a.tahun === Number(filterTahun));
+    return result;
+  }, [data, filterSearch, filterJenis, filterSekolah, filterTahun]);
 
-  function openAddModal() {
-    setEditingId(null);
-    setForm({
-      ...defaultForm,
-      sekolah_id: isOperator && userSekolahId ? userSekolahId : "",
-      tanggal_upload: new Date().toISOString().split("T")[0],
-      bulan: new Date().getMonth() + 1,
-      tahun: new Date().getFullYear(),
-    });
-    setModalOpen(true);
-  }
+  const columns: ColumnDef<ArsipRow>[] = useMemo(
+    () => [
+      {
+        accessorKey: "jenis_dokumen",
+        header: "Jenis",
+        cell: ({ row }) => (
+          <Badge variant={jenisDokumenBadge[row.original.jenis_dokumen] || "default"}>
+            {row.original.jenis_dokumen}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "sekolah_nama",
+        header: "Sekolah",
+        cell: ({ row }) => (
+          <span className="text-xs">{row.original.sekolah_nama || "-"}</span>
+        ),
+      },
+      {
+        accessorKey: "pemilik",
+        header: "Pemilik",
+      },
+      {
+        accessorKey: "file_name",
+        header: "File",
+        cell: ({ row }) => (
+          <span className="max-w-[160px] truncate block" title={row.original.file_name}>
+            {row.original.file_name || "-"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "tahun",
+        header: "Tahun",
+        cell: ({ row }) => (
+          <span className="text-xs">
+            {row.original.bulan ? getBulanName(row.original.bulan) + " " : ""}
+            {row.original.tahun}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "versi",
+        header: "Ver",
+        cell: ({ row }) => (
+          <span className="text-xs text-gray-400">v{row.original.versi}</span>
+        ),
+      },
+      {
+        accessorKey: "tanggal_upload",
+        header: "Tgl Upload",
+        cell: ({ row }) => (
+          <span className="text-xs text-gray-500">{formatDate(row.original.tanggal_upload, "dd/MM/yy")}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); setSelectedArsip(row.original); }}
+              className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+              title="Lihat"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDownload(row.original); }}
+              className="p-1 text-green-600 hover:bg-green-100 rounded"
+              title="Unduh"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDelete(row.original.id); }}
+              className="p-1 text-red-600 hover:bg-red-100 rounded"
+              title="Hapus"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    []
+  );
 
-  function handleEdit(arsip: Arsip) {
-    setEditingId(arsip.id);
-    setForm({ ...arsip });
-    setModalOpen(true);
-  }
-
-  function handleDownload(arsip: Arsip) {
+  function handleDownload(arsip: ArsipRow) {
     window.open(`/api/arsip?id=${arsip.id}&download=1`, "_blank");
   }
 
@@ -231,6 +316,7 @@ export default function ArsipPage() {
     try {
       await fetch(`/api/arsip?id=${confirmDelete}`, { method: "DELETE" });
       setData((prev) => prev.filter((a) => a.id !== confirmDelete));
+      if (selectedArsip?.id === confirmDelete) setSelectedArsip(null);
       toast.success("Arsip berhasil dihapus");
     } catch {
       toast.error("Gagal menghapus arsip");
@@ -238,24 +324,56 @@ export default function ArsipPage() {
     setConfirmDelete(null);
   }
 
+  function openAddModal() {
+    setEditingId(null);
+    setForm({
+      ...defaultForm,
+      sekolah_id: isOperator && userSekolahId ? userSekolahId : "",
+    });
+    setModalOpen(true);
+  }
+
+  function openEditModal(arsip: ArsipRow) {
+    setEditingId(arsip.id);
+    setForm({
+      jenis_dokumen: arsip.jenis_dokumen,
+      sekolah_id: arsip.sekolah_id,
+      bulan: arsip.bulan,
+      tahun: arsip.tahun,
+      pemilik: arsip.pemilik,
+      file: "",
+      file_name: arsip.file_name || "",
+    });
+    setModalOpen(true);
+  }
+
   async function handleSave() {
     try {
-      const { id, jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file } = form;
-      const payload = { jenis_dokumen, sekolah_id, bulan, tahun, pemilik, file, versi: editingId ? form.versi : 1, file_name: form.file_name || "" };
+      const payload = {
+        jenis_dokumen: form.jenis_dokumen,
+        sekolah_id: form.sekolah_id,
+        bulan: form.bulan,
+        tahun: form.tahun,
+        pemilik: form.pemilik,
+        file: form.file,
+        file_name: form.file_name,
+      };
       if (editingId) {
         const res = await fetch("/api/arsip", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: editingId, ...payload }),
         });
-        if (res.ok) { toast.success("Arsip berhasil diperbarui"); fetchList(); }
+        if (res.ok) { toast.success("Arsip berhasil diperbarui"); fetchData(); fetchStats(); }
+        else { toast.error("Gagal memperbarui arsip"); return; }
       } else {
         const res = await fetch("/api/arsip", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, versi: 1 }),
         });
-        if (res.ok) { toast.success("Arsip berhasil dibuat"); fetchList(); }
+        if (res.ok) { toast.success("Arsip berhasil ditambahkan"); fetchData(); fetchStats(); }
+        else { toast.error("Gagal menambahkan arsip"); return; }
       }
     } catch {
       toast.error("Gagal menyimpan arsip");
@@ -263,17 +381,33 @@ export default function ArsipPage() {
     setModalOpen(false);
   }
 
-  useEffect(() => {
-    if (!form.sekolah_id) { setGtkPegawai([]); return; }
-    setLoadingPegawai(true);
-    setGtkPegawai([]);
-    fetch(`/api/gtk?sekolah_id=${form.sekolah_id}`)
-      .then(r => r.json())
-      .then(d => { setGtkPegawai(d.map((g: any) => g.nama).filter((n: string) => n.trim())); setLoadingPegawai(false); })
-      .catch(() => setLoadingPegawai(false));
-  }, [form.sekolah_id]);
+  async function handleImport() {
+    try {
+      let items;
+      try { items = JSON.parse(importData); }
+      catch { toast.error("Format JSON tidak valid"); return; }
+      if (!Array.isArray(items)) { toast.error("Data harus berupa array"); return; }
+      const res = await fetch("/api/arsip/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        toast.success(`Berhasil import ${result.imported} arsip`);
+        setImportModalOpen(false);
+        setImportData("");
+        fetchData();
+        fetchStats();
+      } else {
+        toast.error(result.error || "Import gagal");
+      }
+    } catch {
+      toast.error("Gagal import data");
+    }
+  }
 
-  function updateForm(key: keyof Arsip, value: string | number) {
+  function updateForm(key: keyof FormState, value: string | number) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -290,146 +424,200 @@ export default function ArsipPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Arsip Digital</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Kecamatan Lemahabang</p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {stats.total} dokumen &middot; Kecamatan Lemahabang
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={openAddModal}>
-              <Plus className="w-4 h-4 mr-2" />
-              Tambah Arsip
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => window.open("/api/arsip/export?format=csv", "_blank")}>
+              <FileDown className="w-4 h-4 mr-1.5" />
+              Export CSV
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => window.open("/api/arsip/export?format=json", "_blank")}>
+              <FileDown className="w-4 h-4 mr-1.5" />
+              Export JSON
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setImportModalOpen(true)}>
+              <FileUp className="w-4 h-4 mr-1.5" />
+              Import
+            </Button>
+            <Button size="sm" onClick={openAddModal}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              Tambah
             </Button>
           </div>
         </div>
 
-        {/* Filter */}
-        <Card>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari arsip..."
-                className="pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <select
-              value={filterJenisDokumen}
-              onChange={(e) => setFilterJenisDokumen(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Semua Jenis</option>
-              {jenisDokumenList.map((j) => (
-                <option key={j} value={j}>{j}</option>
-              ))}
-            </select>
-            {!isOperator && (
-            <select
-              value={filterSekolah}
-              onChange={(e) => setFilterSekolah(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Semua Sekolah</option>
-              {sekolahList.map((s) => (
-                <option key={s.id} value={s.id}>{s.nama}</option>
-              ))}
-            </select>
-            )}
-            <select
-              value={filterTahun}
-              onChange={(e) => setFilterTahun(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Semua Tahun</option>
-              {tahunOptions.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </div>
-        </Card>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <Card>
+            <CardContent className="p-3 text-center">
+              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-[11px] text-gray-500 mt-0.5">Total Arsip</div>
+            </CardContent>
+          </Card>
+          {stats.byJenis.slice(0, 4).map((j) => (
+            <Card key={j.jenis_dokumen}>
+              <CardContent className="p-3 text-center">
+                <div className="text-2xl font-bold text-gray-800">{j.count}</div>
+                <div className="text-[11px] text-gray-500 mt-0.5 truncate">{j.jenis_dokumen}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        {/* Grouped List */}
-        <Card>
-          <CardContent className="p-0">
-            {groupedData.length === 0 ? (
-              <div className="p-6">
-                <EmptyState
-                  title="Belum ada arsip"
-                  message="Klik tombol Tambah Arsip untuk menambahkan arsip baru."
-                  icon={<Archive className="w-12 h-12 text-gray-300" />}
-                />
+        {/* Main Content: Two Columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Filters + Table */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    placeholder="Cari arsip..."
+                    className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <select
+                  value={filterJenis}
+                  onChange={(e) => setFilterJenis(e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Semua Jenis</option>
+                  {jenisDokumenList.map((j) => (
+                    <option key={j} value={j}>{j}</option>
+                  ))}
+                </select>
+                {!isOperator && (
+                  <select
+                    value={filterSekolah}
+                    onChange={(e) => setFilterSekolah(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Semua Sekolah</option>
+                    {sekolahOpts.map((s) => (
+                      <option key={s.id} value={s.id}>{s.nama}</option>
+                    ))}
+                  </select>
+                )}
+                <select
+                  value={filterTahun}
+                  onChange={(e) => setFilterTahun(e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Semua Tahun</option>
+                  {tahunOptions.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                {(filterSearch || filterJenis || filterSekolah || filterTahun) && (
+                  <button
+                    onClick={() => { setFilterSearch(""); setFilterJenis(""); setFilterSekolah(""); setFilterTahun(""); }}
+                    className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                  >
+                    Reset filter
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {groupedData.map(([pemilik, group]) => (
-                  <div key={pemilik}>
-                    <button
-                      onClick={() => setExpandedPemilik(expandedPemilik === pemilik ? null : pemilik)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 shrink-0">
-                          <span className="text-xs font-bold">{group.arsip.length}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">{pemilik}</div>
-                          <div className="text-xs text-gray-500">{group.sekolah_nama || "-"}</div>
-                        </div>
-                      </div>
-                      <svg
-                        className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${expandedPemilik === pemilik ? "rotate-180" : ""}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+            </Card>
 
-                    {expandedPemilik === pemilik && (
-                      <div className="bg-gray-50 border-t border-gray-100">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b border-gray-200">
-                              <th className="px-4 py-2 text-left font-semibold text-gray-600 w-10">No</th>
-                              <th className="px-4 py-2 text-left font-semibold text-gray-600">Jenis</th>
-                              <th className="px-4 py-2 text-left font-semibold text-gray-600">File</th>
-                              <th className="px-4 py-2 text-left font-semibold text-gray-600 hidden sm:table-cell">Tanggal</th>
-                              <th className="px-4 py-2 text-center font-semibold text-gray-600 w-24">Aksi</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {group.arsip.map((a, i) => (
-                              <tr key={a.id} className="hover:bg-white transition-colors">
-                                <td className="px-4 py-2 text-gray-500">{i + 1}</td>
-                                <td className="px-4 py-2">
-                                  <Badge variant={jenisDokumenBadge[a.jenis_dokumen].variant}>{a.jenis_dokumen}</Badge>
-                                </td>
-                                <td className="px-4 py-2 max-w-[200px] truncate" title={a.file_name}>{a.file_name || "-"}</td>
-                                <td className="px-4 py-2 text-gray-500 hidden sm:table-cell">{formatDate(a.tanggal_upload)}</td>
-                                <td className="px-4 py-2">
-                                  <div className="flex items-center justify-center gap-1">
-                                    <button onClick={() => setViewing(a)} className="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Lihat">
-                                      <Eye className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button onClick={() => handleDownload(a)} className="p-1 text-green-600 hover:bg-green-100 rounded" title="Unduh">
-                                      <Download className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button onClick={() => setConfirmDelete(a.id)} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Hapus">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+            <Card>
+              <CardContent className="p-0">
+                {filteredData.length === 0 ? (
+                  <div className="p-6">
+                    <EmptyState
+                      title="Belum ada arsip"
+                      message="Klik tombol Tambah untuk menambahkan arsip baru."
+                      icon={<Archive className="w-12 h-12 text-gray-300" />}
+                    />
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  <div className="p-0">
+                    <DataTable
+                      columns={columns}
+                      data={filteredData}
+                      searchable={false}
+                      pageSize={15}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Preview Panel */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardContent className="p-0">
+                {selectedArsip ? (
+                  <div className="divide-y divide-gray-100">
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <h3 className="text-sm font-semibold text-gray-800">Detail Arsip</h3>
+                      <button onClick={() => setSelectedArsip(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="px-4 py-3 space-y-3 text-sm">
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Jenis Dokumen</span>
+                        <Badge variant={jenisDokumenBadge[selectedArsip.jenis_dokumen] || "default"}>
+                          {selectedArsip.jenis_dokumen}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Sekolah</span>
+                        <span className="text-sm">{selectedArsip.sekolah_nama || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Pemilik</span>
+                        <span className="text-sm">{selectedArsip.pemilik || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Periode</span>
+                        <span className="text-sm">
+                          {selectedArsip.bulan ? getBulanName(selectedArsip.bulan) + " " : ""}
+                          {selectedArsip.tahun}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Nama File</span>
+                        <span className="text-sm text-gray-700 break-all">{selectedArsip.file_name || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Versi</span>
+                        <span className="text-sm">v{selectedArsip.versi}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] font-medium text-gray-500">Tanggal Upload</span>
+                        <span className="text-sm">{formatDate(selectedArsip.tanggal_upload)}</span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleDownload(selectedArsip)}>
+                        <Download className="w-3.5 h-3.5 mr-1" />
+                        Unduh
+                      </Button>
+                      <Button size="sm" variant="secondary" className="flex-1" onClick={() => openEditModal(selectedArsip)}>
+                        <FileText className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                    <FilePreview arsipId={selectedArsip.id} />
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-gray-400">
+                    <Eye className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Klik tombol Lihat pada baris arsip untuk melihat detail</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Modal Tambah/Edit */}
@@ -451,13 +639,13 @@ export default function ArsipPage() {
             {isOperator ? (
               <input type="hidden" name="sekolah_id" value={userSekolahId || ""} />
             ) : (
-            <Select
-              label="Sekolah"
-              id="sekolah_id"
-              value={form.sekolah_id}
-              onChange={(e) => updateForm("sekolah_id", e.target.value)}
-              options={sekolahList.map((s) => ({ value: s.id, label: s.nama }))}
-            />
+              <Select
+                label="Sekolah"
+                id="sekolah_id"
+                value={form.sekolah_id}
+                onChange={(e) => updateForm("sekolah_id", e.target.value)}
+                options={sekolahOpts.map((s) => ({ value: s.id, label: s.nama }))}
+              />
             )}
             <Select
               label="Bulan"
@@ -480,7 +668,7 @@ export default function ArsipPage() {
               onChange={(e) => updateForm("pemilik", e.target.value)}
               options={gtkPegawai.map((n) => ({ value: n, label: n }))}
               disabled={!form.sekolah_id || loadingPegawai}
-              placeholder={loadingPegawai ? "Memuat..." : (!form.sekolah_id ? "Pilih sekolah terlebih dahulu" : "Pilih pegawai")}
+              placeholder={loadingPegawai ? "Memuat..." : (!form.sekolah_id ? "Pilih sekolah dulu" : "Pilih pegawai")}
             />
             <Input
               label="Upload File"
@@ -508,14 +696,44 @@ export default function ArsipPage() {
         </div>
       </Modal>
 
-      {/* Modal Lihat Detail */}
+      {/* Modal Import */}
       <Modal
-        open={!!viewing}
-        onClose={() => setViewing(null)}
-        title="Detail Arsip"
-        size="full"
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title="Import Arsip (JSON)"
+        size="lg"
       >
-        {viewing && <FileViewer arsip={viewing} sekolahList={sekolahList} />}
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Tempel data JSON array arsip di bawah ini. Contoh format:
+          </p>
+          <pre className="text-xs bg-gray-50 p-3 rounded-lg border overflow-x-auto">
+{`[
+  {
+    "jenis_dokumen": "Surat",
+    "sekolah_id": "...",
+    "bulan": 6,
+    "tahun": "2026",
+    "pemilik": "Nama Pegawai",
+    "file_name": "surat.pdf"
+  }
+]`}
+          </pre>
+          <textarea
+            value={importData}
+            onChange={(e) => setImportData(e.target.value)}
+            rows={10}
+            className="w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Paste JSON array here..."
+          />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setImportModalOpen(false)}>Batal</Button>
+            <Button onClick={handleImport}>
+              <Upload className="w-4 h-4 mr-1.5" />
+              Import
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal Confirm Delete */}
@@ -537,67 +755,43 @@ export default function ArsipPage() {
   );
 }
 
-function FileViewer({ arsip, sekolahList }: { arsip: Arsip; sekolahList: SekolahOption[] }) {
+function FilePreview({ arsipId }: { arsipId: string }) {
   const [fileData, setFileData] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/arsip?id=${arsip.id}`)
-      .then(r => r.json())
-      .then(d => { setFileData(d.file); setLoading(false); })
+    fetch(`/api/arsip?id=${arsipId}`)
+      .then((r) => r.json())
+      .then((d) => { setFileData(d.file); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [arsip.id]);
+  }, [arsipId]);
 
   const isPdf = fileData?.startsWith("data:application/pdf");
   const isImage = fileData?.startsWith("data:image/");
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <DetailField label="Jenis Dokumen" value={<Badge variant={jenisDokumenBadge[arsip.jenis_dokumen].variant}>{arsip.jenis_dokumen}</Badge>} />
-        <DetailField label="Sekolah" value={sekolahList.find(s => s.id === arsip.sekolah_id)?.nama || "-"} />
-        <DetailField label="Pemilik" value={arsip.pemilik} />
-        <DetailField label="Nama File" value={arsip.file_name || "-"} />
-        <DetailField label="Tanggal Upload" value={formatDate(arsip.tanggal_upload)} />
+    <div className="border-t border-gray-100">
+      <div className="px-4 py-2 bg-gray-50">
+        <h4 className="text-xs font-semibold text-gray-600">Pratinjau</h4>
       </div>
-
-      <div className="border-t pt-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold text-sm text-gray-800">Pratinjau Dokumen</h4>
-          <a
-            href={`/api/arsip?id=${arsip.id}&download=1`}
-            download={arsip.file_name}
-            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-          >
-            <Download className="w-3 h-3" />
-            Unduh
-          </a>
-        </div>
+      <div className="p-2">
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-gray-400 text-sm">Memuat file...</div>
+          <div className="flex items-center justify-center py-8 text-gray-400 text-xs">Memuat...</div>
         ) : fileData && isPdf ? (
-          <iframe src={fileData} className="w-full h-[70vh] border rounded-lg" title="PDF Preview" />
+          <iframe src={fileData} className="w-full h-[300px] rounded border" title="Preview" />
         ) : fileData && isImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={fileData} alt={arsip.file_name} className="max-w-full max-h-[70vh] object-contain mx-auto border rounded-lg" />
-        ) : (
-          <div className="text-center py-12 text-gray-400 text-sm">
-            Pratinjau tidak tersedia untuk format ini.
-            <br />
-            <a href={`/api/arsip?id=${arsip.id}&download=1`} className="text-blue-600 underline mt-1 inline-block">Unduh file</a>
+          <img src={fileData} alt="" className="w-full h-auto max-h-[300px] object-contain rounded border" />
+        ) : fileData ? (
+          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+            <File className="w-8 h-8 mb-2" />
+            <span className="text-xs">Pratinjau tidak tersedia</span>
           </div>
+        ) : (
+          <div className="text-center py-8 text-gray-400 text-xs">File tidak ditemukan</div>
         )}
       </div>
-    </div>
-  );
-}
-
-function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <span className="block text-xs font-medium text-gray-500 mb-0.5">{label}</span>
-      <div className="text-sm text-gray-800">{value}</div>
     </div>
   );
 }

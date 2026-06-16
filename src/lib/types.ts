@@ -208,10 +208,12 @@ export type Arsip = {
   id: string;
   jenis_dokumen: string;
   sekolah_id?: string;
+  sekolah_nama?: string;
   bulan?: number;
   tahun: string;
   pemilik: string;
   file: string;
+  file_name?: string;
   versi: number;
   created_at: string;
   updated_at: string;
