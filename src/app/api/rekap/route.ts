@@ -62,22 +62,22 @@ export async function GET() {
 
       // GTK totals
       queryAll(`SELECT COUNT(*) as total,
-        SUM(CASE WHEN status_pegawai='PNS' THEN 1 ELSE 0 END) as pns,
-        SUM(CASE WHEN status_pegawai='PPPK' OR status_pegawai='honorer' THEN 1 ELSE 0 END) as non_pns,
-        SUM(CASE WHEN status_pegawai='honorer' THEN 1 ELSE 0 END) as honorer
+        SUM(CASE WHEN LOWER(status_pegawai)='pns' THEN 1 ELSE 0 END) as pns,
+        SUM(CASE WHEN LOWER(status_pegawai)='pppk' OR LOWER(status_pegawai)='honorer' THEN 1 ELSE 0 END) as non_pns,
+        SUM(CASE WHEN LOWER(status_pegawai)='honorer' THEN 1 ELSE 0 END) as honorer
       FROM gtk` + wh, args),
 
       // GTK per sekolah
       sid
         ? queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
-          SUM(CASE WHEN g.status_pegawai='PNS' THEN 1 ELSE 0 END) as pns,
-          SUM(CASE WHEN g.status_pegawai='PPPK' OR g.status_pegawai='honorer' THEN 1 ELSE 0 END) as non_pns,
-          SUM(CASE WHEN g.status_pegawai='honorer' THEN 1 ELSE 0 END) as honorer
+          SUM(CASE WHEN LOWER(g.status_pegawai)='pns' THEN 1 ELSE 0 END) as pns,
+          SUM(CASE WHEN LOWER(g.status_pegawai)='pppk' OR LOWER(g.status_pegawai)='honorer' THEN 1 ELSE 0 END) as non_pns,
+          SUM(CASE WHEN LOWER(g.status_pegawai)='honorer' THEN 1 ELSE 0 END) as honorer
         FROM gtk g JOIN sekolah s ON g.sekolah_id=s.id WHERE g.sekolah_id=? AND g.deleted_at IS NULL GROUP BY s.nama`, [sid])
         : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
-          SUM(CASE WHEN g.status_pegawai='PNS' THEN 1 ELSE 0 END) as pns,
-          SUM(CASE WHEN g.status_pegawai='PPPK' OR g.status_pegawai='honorer' THEN 1 ELSE 0 END) as non_pns,
-          SUM(CASE WHEN g.status_pegawai='honorer' THEN 1 ELSE 0 END) as honorer
+          SUM(CASE WHEN LOWER(g.status_pegawai)='pns' THEN 1 ELSE 0 END) as pns,
+          SUM(CASE WHEN LOWER(g.status_pegawai)='pppk' OR LOWER(g.status_pegawai)='honorer' THEN 1 ELSE 0 END) as non_pns,
+          SUM(CASE WHEN LOWER(g.status_pegawai)='honorer' THEN 1 ELSE 0 END) as honorer
         FROM gtk g JOIN sekolah s ON g.sekolah_id=s.id WHERE g.deleted_at IS NULL GROUP BY s.nama ORDER BY s.nama`),
 
       // Mapping pegawai
