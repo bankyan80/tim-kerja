@@ -10,7 +10,7 @@ export async function GET() {
     const wh = sid ? " WHERE sekolah_id = ? AND deleted_at IS NULL" : " WHERE deleted_at IS NULL";
     const args = sid ? [sid] : [];
 
-    const [sekolah, siswaKelas, siswaGender, gtkTotals, gtkPerSekolah, mapPegawai,
+    const [sekolah, siswaKelas, siswaGender, siswaPerSekolah, gtkTotals, gtkPerSekolah, mapPegawai,
       laporanStats, sarprasTotals, sarprasJenis, spmbTotals, spmbSekolah, suratTotals,
       suratBulan, progresData] = await Promise.all([
       // Sekolah
@@ -32,6 +32,33 @@ export async function GET() {
 
       // Siswa gender
       queryAll("SELECT COUNT(*) as total, SUM(CASE WHEN jenis_kelamin='L' THEN 1 ELSE 0 END) as laki, SUM(CASE WHEN jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan FROM siswa" + wh, args),
+
+      // Siswa per sekolah (with class & gender breakdown)
+      sid
+        ? queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
+            SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
+            SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
+            SUM(CASE WHEN siswa.kelas='I' THEN 1 ELSE 0 END) as kelas_i,
+            SUM(CASE WHEN siswa.kelas='II' THEN 1 ELSE 0 END) as kelas_ii,
+            SUM(CASE WHEN siswa.kelas='III' THEN 1 ELSE 0 END) as kelas_iii,
+            SUM(CASE WHEN siswa.kelas='IV' THEN 1 ELSE 0 END) as kelas_iv,
+            SUM(CASE WHEN siswa.kelas='V' THEN 1 ELSE 0 END) as kelas_v,
+            SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
+          FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
+          WHERE siswa.sekolah_id=? AND siswa.deleted_at IS NULL
+          GROUP BY s.nama ORDER BY s.nama`, [sid])
+        : queryAll(`SELECT s.nama as sekolah, COUNT(*) as total,
+            SUM(CASE WHEN siswa.jenis_kelamin='L' THEN 1 ELSE 0 END) as laki,
+            SUM(CASE WHEN siswa.jenis_kelamin='P' THEN 1 ELSE 0 END) as perempuan,
+            SUM(CASE WHEN siswa.kelas='I' THEN 1 ELSE 0 END) as kelas_i,
+            SUM(CASE WHEN siswa.kelas='II' THEN 1 ELSE 0 END) as kelas_ii,
+            SUM(CASE WHEN siswa.kelas='III' THEN 1 ELSE 0 END) as kelas_iii,
+            SUM(CASE WHEN siswa.kelas='IV' THEN 1 ELSE 0 END) as kelas_iv,
+            SUM(CASE WHEN siswa.kelas='V' THEN 1 ELSE 0 END) as kelas_v,
+            SUM(CASE WHEN siswa.kelas='VI' THEN 1 ELSE 0 END) as kelas_vi
+          FROM siswa JOIN sekolah s ON s.id = siswa.sekolah_id
+          WHERE siswa.deleted_at IS NULL
+          GROUP BY s.nama ORDER BY s.nama`),
 
       // GTK totals
       queryAll(`SELECT COUNT(*) as total,
@@ -160,6 +187,18 @@ export async function GET() {
         laki: p(sg.laki),
         perempuan: p(sg.perempuan),
         perKelas: siswaKelas.map((r: Record<string, unknown>) => ({ kelas: String(r.kelas || ""), jumlah: p(r.jumlah) })),
+        perSekolah: siswaPerSekolah.map((r: Record<string, unknown>) => ({
+          sekolah: String(r.sekolah || ""),
+          total: p(r.total),
+          laki: p(r.laki),
+          perempuan: p(r.perempuan),
+          kelas_i: p(r.kelas_i),
+          kelas_ii: p(r.kelas_ii),
+          kelas_iii: p(r.kelas_iii),
+          kelas_iv: p(r.kelas_iv),
+          kelas_v: p(r.kelas_v),
+          kelas_vi: p(r.kelas_vi),
+        })),
       },
       dataGTK: {
         total: p(gt.total),

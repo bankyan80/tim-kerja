@@ -36,7 +36,7 @@ const tahunPelajaranOptions = [
 
 type RekapData = {
   dataSekolah: { label: string; value: number; variant: string }[];
-  dataSiswa: { total: number; laki: number; perempuan: number; perKelas: { kelas: string; jumlah: number }[] };
+  dataSiswa: { total: number; laki: number; perempuan: number; perKelas: { kelas: string; jumlah: number }[]; perSekolah: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[] };
   dataGTK: { total: number; pns: number; nonPns: number; honorer: number; perSekolah: { sekolah: string; total: number; pns: number; nonPns: number; honorer: number }[] };
   mappingPegawai: { sekolah: string; kepala_sekolah: string; guru: number; staf: number; operator: string }[];
   laporanBulanan: { sekolahNama: string[]; stats: Record<string, unknown> };
@@ -214,7 +214,7 @@ function DataSekolahTab({ data }: { data?: { label: string; value: number; varia
   );
 }
 
-function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempuan: number; perKelas: { kelas: string; jumlah: number }[] } }) {
+function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempuan: number; perKelas: { kelas: string; jumlah: number }[]; perSekolah: { sekolah: string; total: number; laki: number; perempuan: number; kelas_i: number; kelas_ii: number; kelas_iii: number; kelas_iv: number; kelas_v: number; kelas_vi: number }[] } }) {
   if (!data) return <EmptyState title="Belum ada data siswa" />;
   return (
     <div className="space-y-6">
@@ -227,6 +227,28 @@ function DataSiswaTab({ data }: { data?: { total: number; laki: number; perempua
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-3">Jumlah Siswa per Kelas</h4>
           <TabTable headers={["Kelas", "Jumlah"]} rows={data.perKelas.map((k) => [k.kelas, k.jumlah])} />
+        </div>
+      )}
+      {data.perSekolah?.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Rekapitulasi per Sekolah</h4>
+          <div className="overflow-x-auto">
+            <TabTable
+              headers={["Sekolah", "Total", "L", "P", "Kls I", "Kls II", "Kls III", "Kls IV", "Kls V", "Kls VI"]}
+              rows={data.perSekolah.map((s) => [
+                s.sekolah,
+                s.total,
+                s.laki,
+                s.perempuan,
+                s.kelas_i,
+                s.kelas_ii,
+                s.kelas_iii,
+                s.kelas_iv,
+                s.kelas_v,
+                s.kelas_vi,
+              ])}
+            />
+          </div>
         </div>
       )}
     </div>
