@@ -7,7 +7,7 @@ export default function SignOutPage() {
     <div className="login-page">
       <div className="login-card text-center">
         <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
-          <img src="/logokab.png" alt="Logo Kabupaten Cirebon" className="h-full w-full object-contain" />
+          <img src="/api/logo" alt="Logo Kabupaten Cirebon" className="h-full w-full object-contain" />
         </div>
 
         <h1 className="text-xl font-bold text-gray-800">
