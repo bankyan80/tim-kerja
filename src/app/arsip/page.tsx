@@ -266,6 +266,14 @@ export default function ArsipPage() {
       {
         accessorKey: "pemilik",
         header: "Pemilik",
+        cell: ({ row }) => (
+          <button
+            onClick={() => setSelectedArsip(row.original)}
+            className="text-blue-600 hover:underline text-left"
+          >
+            {row.original.pemilik}
+          </button>
+        ),
       },
       {
         accessorKey: "file_name",
@@ -274,59 +282,6 @@ export default function ArsipPage() {
           <span className="max-w-[160px] truncate block" title={row.original.file_name}>
             {row.original.file_name || "-"}
           </span>
-        ),
-      },
-      {
-        accessorKey: "tahun",
-        header: "Tahun",
-        cell: ({ row }) => (
-          <span className="text-xs">
-            {row.original.bulan ? getBulanName(row.original.bulan) + " " : ""}
-            {row.original.tahun}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "versi",
-        header: "Ver",
-        cell: ({ row }) => (
-          <span className="text-xs text-gray-400">v{row.original.versi}</span>
-        ),
-      },
-      {
-        accessorKey: "tanggal_upload",
-        header: "Tgl Upload",
-        cell: ({ row }) => (
-          <span className="text-xs text-gray-500">{formatDate(row.original.tanggal_upload, "dd/MM/yy")}</span>
-        ),
-      },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); setSelectedArsip(row.original); }}
-              className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-              title="Lihat"
-            >
-              <Eye className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleDownload(row.original); }}
-              className="p-1 text-green-600 hover:bg-green-100 rounded"
-              title="Unduh"
-            >
-              <Download className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDelete(row.original.id); }}
-              className="p-1 text-red-600 hover:bg-red-100 rounded"
-              title="Hapus"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
         ),
       },
     ],
